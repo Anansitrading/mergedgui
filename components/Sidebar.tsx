@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, TerminalSquare, Activity, Settings, Cpu, ServerCog } from 'lucide-react';
+import { TerminalSquare, Settings, Cpu, ServerCog, Bot } from 'lucide-react';
 import { WorkspaceMode } from '../types';
 import { cn } from '../utils/cn';
 
@@ -20,12 +20,20 @@ export function Sidebar({ currentMode, onModeChange, onOpenSettings }: SidebarPr
         </div>
         <div className="hidden lg:block ml-3">
           <h1 className="font-bold text-lg tracking-tight">Kijko</h1>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">v2.0.4 // LOCAL</p>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">v2.1.0 // TRINITY</p>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-6 px-3 space-y-2">
+        <NavButton 
+          active={currentMode === 'agents'} 
+          onClick={() => onModeChange('agents')}
+          icon={<Bot className="w-5 h-5" />}
+          label="Agents"
+          description="Let's Build an Agent"
+        />
+
         <NavButton 
           active={currentMode === 'hyperglyph'} 
           onClick={() => onModeChange('hyperglyph')}

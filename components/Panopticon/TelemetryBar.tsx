@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Terminal, ChevronUp, ChevronDown, Activity, Clock } from 'lucide-react';
+import { Terminal, ChevronUp, ChevronDown, Activity, Clock, Zap } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 const MOCK_TELEMETRY = [
@@ -27,8 +27,8 @@ export function TelemetryBar() {
       >
         <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-primary/80 group-hover:text-primary">
-                <Activity size={12} />
-                <span>Telemetry Stream</span>
+                <Zap size={12} />
+                <span>Agentic Stream</span>
             </div>
             <div className="hidden sm:flex items-center gap-2 text-[10px] font-mono text-muted-foreground">
                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

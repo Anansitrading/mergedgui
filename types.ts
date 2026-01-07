@@ -1,4 +1,4 @@
-export type WorkspaceMode = 'hyperglyph' | 'panopticon';
+export type WorkspaceMode = 'hyperglyph' | 'panopticon' | 'agents';
 
 export interface LogEntry {
   ts: string;

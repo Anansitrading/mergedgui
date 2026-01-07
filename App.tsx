@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
 import { PanopticonView } from './components/Panopticon/PanopticonView';
+import { AgentsView } from './components/Agents/AgentsView';
 import { ContextStore } from './components/ContextStore';
 import { SettingsModal } from './components/SettingsModal';
 import { WorkspaceMode } from './types';
 
 function App() {
-  const [mode, setMode] = useState<WorkspaceMode>('hyperglyph');
+  const [mode, setMode] = useState<WorkspaceMode>('agents');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   return (
@@ -29,18 +30,18 @@ function App() {
         
         <div className="flex-1 p-4 lg:p-6 overflow-hidden">
           <div className="h-full w-full rounded-[var(--radius)] border border-border/50 bg-card/30 backdrop-blur-xl shadow-2xl overflow-hidden relative">
+            {mode === 'agents' && <AgentsView />}
             
-            {mode === 'hyperglyph' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] h-full transition-all duration-300">
+            {mode === 'hyperglyph' && (
+               <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] h-full transition-all duration-300">
                 <ChatInterface />
                 <div className="hidden lg:block border-l border-border/50 bg-secondary/10 relative overflow-hidden">
                   <ContextStore />
                 </div>
               </div>
-            ) : (
-              <PanopticonView /> 
             )}
             
+            {mode === 'panopticon' && <PanopticonView />}
           </div>
         </div>
       </main>
