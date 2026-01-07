@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, TerminalSquare, Activity, Settings, Cpu } from 'lucide-react';
+import { LayoutDashboard, TerminalSquare, Activity, Settings, Cpu, ServerCog } from 'lucide-react';
 import { WorkspaceMode } from '../types';
 import { cn } from '../utils/cn';
 
@@ -37,9 +37,9 @@ export function Sidebar({ currentMode, onModeChange, onOpenSettings }: SidebarPr
         <NavButton 
           active={currentMode === 'panopticon'} 
           onClick={() => onModeChange('panopticon')}
-          icon={<Activity className="w-5 h-5" />}
-          label="Monitor"
-          description="Agent Observability"
+          icon={<ServerCog className="w-5 h-5" />}
+          label="Panopticon"
+          description="MCPs & Skills"
         />
       </nav>
 

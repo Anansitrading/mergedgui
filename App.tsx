@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { ChatInterface } from './components/ChatInterface';
-import { MonitorInterface } from './components/MonitorInterface';
+import { PanopticonView } from './components/Panopticon/PanopticonView';
 import { ContextStore } from './components/ContextStore';
 import { SettingsModal } from './components/SettingsModal';
 import { WorkspaceMode } from './types';
@@ -38,7 +38,7 @@ function App() {
                 </div>
               </div>
             ) : (
-              <MonitorInterface /> 
+              <PanopticonView /> 
             )}
             
           </div>
