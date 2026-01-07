@@ -1,0 +1,82 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+:root {
+  /* Requested Palette - OKLCH High Definition */
+  --background: oklch(1.0000 0 0);
+  --foreground: oklch(0.2686 0 0);
+  --card: oklch(1.0000 0 0);
+  --card-foreground: oklch(0.2686 0 0);
+  --popover: oklch(1.0000 0 0);
+  --popover-foreground: oklch(0.2686 0 0);
+  --primary: oklch(0.7909 0.1543 85.6644);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.9970 0 0);
+  --secondary-foreground: oklch(0.4535 0.0257 268.1172);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.5642 0.0236 273.7712);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.4983 0.1074 58.2747);
+  --destructive: oklch(0.6683 0.1595 28.4730);
+  --destructive-foreground: oklch(1.0000 0 0);
+  --border: oklch(0.9560 0.0040 286.3240);
+  --input: oklch(0.9560 0.0040 286.3240);
+  --ring: oklch(0.7909 0.1543 85.6644);
+  
+  /* Charts & Sidebar */
+  --chart-1: oklch(0.7909 0.1543 85.6644);
+  --chart-2: oklch(0.6992 0.1440 73.4387);
+  --chart-3: oklch(0.5835 0.1275 61.6379);
+  --chart-4: oklch(0.4983 0.1074 58.2747);
+  --chart-5: oklch(0.4364 0.0903 57.3299);
+  --sidebar: oklch(0.98 0 0);
+  --sidebar-foreground: oklch(0.2686 0 0);
+  --sidebar-primary: oklch(0.7909 0.1543 85.6644);
+  --sidebar-primary-foreground: oklch(1.0000 0 0);
+  --sidebar-accent: oklch(0.96 0 0);
+  --sidebar-accent-foreground: oklch(0.4983 0.1074 58.2747);
+  --sidebar-border: oklch(0.9560 0.0040 286.3240);
+  --sidebar-ring: oklch(0.7909 0.1543 85.6644);
+
+  --radius: 0.95rem;
+}
+
+.dark {
+  --background: oklch(0.2046 0 0);
+  --foreground: oklch(0.9219 0 0);
+  --card: oklch(0.2686 0 0);
+  --card-foreground: oklch(0.9219 0 0);
+  --popover: oklch(0.2686 0 0);
+  --popover-foreground: oklch(0.9219 0 0);
+  --primary: oklch(0.7909 0.1543 85.6644);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0.2635 0.05 250);
+  --secondary-foreground: oklch(0.9219 0 0);
+  --muted: oklch(0.2393 0 0);
+  --muted-foreground: oklch(0.7155 0 0);
+  --accent: oklch(0.3 0.05 250);
+  --accent-foreground: oklch(0.9387 0.0983 102.4624);
+  --destructive: oklch(0.6683 0.1595 28.4730);
+  --destructive-foreground: oklch(1.0000 0 0);
+  --border: oklch(0.3715 0 0);
+  --input: oklch(0.3715 0 0);
+  --ring: oklch(0.7909 0.1543 85.6644);
+  --sidebar: oklch(0.1684 0 0);
+  --sidebar-foreground: oklch(0.9219 0 0);
+  --sidebar-primary: oklch(0.7909 0.1543 85.6644);
+  --sidebar-primary-foreground: oklch(1.0000 0 0);
+  --sidebar-accent: oklch(0.3 0.05 250);
+  --sidebar-accent-foreground: oklch(0.9387 0.0983 102.4624);
+  --sidebar-border: oklch(0.3715 0 0);
+  --sidebar-ring: oklch(0.7909 0.1543 85.6644);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Brutalist grain overlay for texture */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+}

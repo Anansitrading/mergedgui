@@ -1,0 +1,28 @@
+export type WorkspaceMode = 'hyperglyph' | 'panopticon';
+
+export interface LogEntry {
+  ts: string;
+  level: 'INFO' | 'DEBUG' | 'WARN' | 'ERROR';
+  agent: string;
+  msg: string;
+}
+
+export interface AgentStatus {
+    name: string;
+    state: 'Idle' | 'Thinking' | 'Working' | 'Error';
+    load: number;
+}
+
+export interface Message {
+  role: 'user' | 'model';
+  content: string;
+  attachments?: File[];
+}
+
+export interface ContextItem {
+    id: string;
+    name: string;
+    type: 'file' | 'repo';
+    size: string;
+    status: 'cached' | 'pending' | 'expired';
+}

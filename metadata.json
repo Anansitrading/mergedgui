@@ -1,0 +1,7 @@
+{
+  "name": "Kijko",
+  "description": "A unified Mission Control Center merging HyperGlyph's creation tools with Panopticon's agent observability. Features voice-enabled multimodal chat, real-time agent monitoring, and a high-definition avant-garde interface.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
