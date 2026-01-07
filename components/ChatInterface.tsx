@@ -1,17 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Mic, Paperclip, StopCircle, Bot, User, FileText, Image as ImageIcon } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
 import { cn } from '../utils/cn';
 import { Message } from '../types';
 
 // Mock gemini interaction
 async function sendMessageToGemini(text: string, files: File[]): Promise<string> {
     // In a real implementation, use the @google/genai SDK here.
-    // For this UI demo, we simulate a response delay.
     return new Promise(resolve => setTimeout(() => resolve(`I processed your request: "${text}" with ${files.length} attachments. Here is a simulated response demonstrating the UI structure.`), 1500));
 }
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  mode?: 'full' | 'minimal';
+  className?: string;
+}
+
+export function ChatInterface({ mode = 'full', className }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -71,7 +74,11 @@ export function ChatInterface() {
     setMessages(prev => [...prev, newMessage]);
     setInputValue('');
     setAttachments([]);
-    setIsTyping(true);
+    
+    // Only show typing indicator if we have a place to show messages
+    if (mode === 'full') {
+        setIsTyping(true);
+    }
 
     try {
         const response = await sendMessageToGemini(newMessage.content, newMessage.attachments || []);
@@ -98,70 +105,72 @@ export function ChatInterface() {
   }, [messages, isTyping]);
 
   return (
-    <div className="flex flex-col h-full bg-transparent">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center opacity-30 select-none pointer-events-none">
-                <Bot className="w-16 h-16 mb-4 text-primary" />
-                <h2 className="text-xl font-bold tracking-tight">HYPERVISA</h2>
-                <p className="font-mono text-xs">Ready for input</p>
-            </div>
-        )}
-        
-        {messages.map((msg, idx) => (
-          <div key={idx} className={cn("flex gap-4 max-w-3xl", msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto")}>
-            <div className={cn(
-              "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-sm",
-              msg.role === 'user' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-card-foreground border-border"
-            )}>
-              {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-            </div>
+    <div className={cn("flex flex-col h-full bg-transparent", className)}>
+      {/* Messages Area - Only visible in full mode */}
+      {mode === 'full' && (
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {messages.length === 0 && (
+                <div className="h-full flex flex-col items-center justify-center opacity-30 select-none pointer-events-none">
+                    <Bot className="w-16 h-16 mb-4 text-primary" />
+                    <h2 className="text-xl font-bold tracking-tight">HYPERVISA</h2>
+                    <p className="font-mono text-xs">Ready for input</p>
+                </div>
+            )}
             
-            <div className={cn(
-              "flex flex-col gap-2 min-w-[200px] max-w-full", 
-              msg.role === 'user' ? "items-end" : "items-start"
-            )}>
-                {msg.attachments && msg.attachments.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-1">
-                        {msg.attachments.map((file, i) => (
-                            <div key={i} className="flex items-center gap-2 bg-secondary/50 border border-border rounded px-3 py-1.5 text-xs font-mono text-secondary-foreground">
-                                {file.type.startsWith('image') ? <ImageIcon size={12}/> : <FileText size={12}/>}
-                                <span className="max-w-[150px] truncate">{file.name}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
+            {messages.map((msg, idx) => (
+            <div key={idx} className={cn("flex gap-4 max-w-3xl", msg.role === 'user' ? "ml-auto flex-row-reverse" : "mr-auto")}>
                 <div className={cn(
-                  "p-4 rounded-2xl shadow-sm text-sm leading-relaxed",
-                  msg.role === 'user' 
-                    ? "bg-primary text-primary-foreground rounded-tr-none" 
-                    : "bg-card border border-border text-card-foreground rounded-tl-none"
+                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-sm",
+                msg.role === 'user' ? "bg-primary text-primary-foreground border-primary" : "bg-card text-card-foreground border-border"
                 )}>
-                  {msg.content}
+                {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                </div>
+                
+                <div className={cn(
+                "flex flex-col gap-2 min-w-[200px] max-w-full", 
+                msg.role === 'user' ? "items-end" : "items-start"
+                )}>
+                    {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-1">
+                            {msg.attachments.map((file, i) => (
+                                <div key={i} className="flex items-center gap-2 bg-secondary/50 border border-border rounded px-3 py-1.5 text-xs font-mono text-secondary-foreground">
+                                    {file.type.startsWith('image') ? <ImageIcon size={12}/> : <FileText size={12}/>}
+                                    <span className="max-w-[150px] truncate">{file.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    <div className={cn(
+                    "p-4 rounded-2xl shadow-sm text-sm leading-relaxed",
+                    msg.role === 'user' 
+                        ? "bg-primary text-primary-foreground rounded-tr-none" 
+                        : "bg-card border border-border text-card-foreground rounded-tl-none"
+                    )}>
+                    {msg.content}
+                    </div>
                 </div>
             </div>
-          </div>
-        ))}
-        {isTyping && (
-            <div className="flex gap-4 mr-auto max-w-3xl">
-                 <div className="w-8 h-8 rounded-lg bg-card text-card-foreground border border-border flex items-center justify-center shrink-0">
-                    <Bot size={16} />
-                 </div>
-                 <div className="bg-card border border-border p-4 rounded-2xl rounded-tl-none">
-                    <div className="flex gap-1">
-                        <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
-                        <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
-                        <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+            ))}
+            {isTyping && (
+                <div className="flex gap-4 mr-auto max-w-3xl">
+                    <div className="w-8 h-8 rounded-lg bg-card text-card-foreground border border-border flex items-center justify-center shrink-0">
+                        <Bot size={16} />
                     </div>
-                 </div>
-            </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+                    <div className="bg-card border border-border p-4 rounded-2xl rounded-tl-none">
+                        <div className="flex gap-1">
+                            <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></span>
+                            <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></span>
+                            <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></span>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div ref={messagesEndRef} />
+        </div>
+      )}
 
       {/* Input Area */}
-      <div className="p-6 pt-2">
+      <div className={cn(mode === 'minimal' ? "p-0" : "p-6 pt-2")}>
         {attachments.length > 0 && (
             <div className="flex gap-2 mb-2 overflow-x-auto pb-2 px-1">
                 {attachments.map((file, i) => (
@@ -208,7 +217,7 @@ export function ChatInterface() {
                   handleSend();
                 }
               }}
-              placeholder="Message Hypervisa..."
+              placeholder={mode === 'minimal' ? "Send command to agents..." : "Message Hypervisa..."}
               className="flex-1 bg-transparent border-none focus:ring-0 resize-none max-h-[200px] min-h-[24px] py-3 text-sm"
               rows={1}
               style={{ height: 'auto', minHeight: '44px' }}
@@ -236,9 +245,11 @@ export function ChatInterface() {
             </button>
           </div>
         </div>
-        <div className="text-center mt-2">
-             <p className="text-[10px] text-muted-foreground/60 font-mono">AI can make mistakes. Check important info.</p>
-        </div>
+        {mode === 'full' && (
+            <div className="text-center mt-2">
+                <p className="text-[10px] text-muted-foreground/60 font-mono">AI can make mistakes. Check important info.</p>
+            </div>
+        )}
       </div>
     </div>
   );

@@ -97,8 +97,12 @@ function RegistryCard({ item, onSelect }: { item: RegistryItem, onSelect: () => 
           </div>
           
           <button 
-            className="p-1.5 rounded-md text-muted-foreground/50 hover:text-accent-foreground hover:bg-accent/10 opacity-0 group-hover:opacity-100 transition-all duration-200"
+            className="p-1.5 rounded-md text-muted-foreground/50 hover:text-accent-foreground hover:bg-accent/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-200"
             title="Install Server"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
           >
              <Download size={14} />
           </button>
