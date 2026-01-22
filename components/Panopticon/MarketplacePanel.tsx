@@ -82,7 +82,12 @@ export function MarketplacePanel({ onSelect }: MarketplacePanelProps) {
   );
 }
 
-function RegistryCard({ item, onSelect }: { item: RegistryItem, onSelect: () => void }) {
+interface RegistryCardProps {
+  item: RegistryItem;
+  onSelect: () => void;
+}
+
+function RegistryCard({ item, onSelect }: RegistryCardProps) {
   return (
     <div 
       onClick={onSelect}

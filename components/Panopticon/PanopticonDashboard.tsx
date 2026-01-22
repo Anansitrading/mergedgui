@@ -8,7 +8,7 @@ export function PanopticonDashboard() {
       
       {/* Column 1: SERVERS */}
       <div className="flex flex-col min-h-0 pl-2">
-        <Header icon={<Server size={14} />} title="ACTIVE SERVERS" />
+        <Header icon={<Server size={14} />} title="PLUGINS" />
         <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
             <ServerCard name="filesystem" status="connected" version="v1.0.4" />
             <ServerCard name="brave-search" status="connected" version="v0.9.1" />
