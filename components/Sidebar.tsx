@@ -9,6 +9,7 @@ import {
 
 interface SidebarProps {
   onOpenSettings: () => void;
+  onOpenProjects?: () => void;
   onNewIngestion: () => void;
   onAddFiles: () => void;
   isOpen?: boolean;
@@ -17,6 +18,7 @@ interface SidebarProps {
 
 export function Sidebar({
   onOpenSettings,
+  onOpenProjects,
   onNewIngestion,
   onAddFiles,
   isOpen = false,
@@ -55,7 +57,7 @@ export function Sidebar({
         <AddFilesButton onClick={onAddFiles} />
 
         {/* System Footer */}
-        <SystemFooter onOpenSettings={onOpenSettings} />
+        <SystemFooter onOpenSettings={onOpenSettings} onOpenProjects={onOpenProjects} />
       </aside>
     </>
   );

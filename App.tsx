@@ -42,7 +42,14 @@ function WorkspaceView() {
   if (!selectedProject) {
     return (
       <div className="h-screen w-screen overflow-hidden bg-background text-foreground font-sans selection:bg-primary/30">
-        <ProjectOverview onProjectSelect={handleProjectSelect} />
+        <ProjectOverview
+          onProjectSelect={handleProjectSelect}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+        />
       </div>
     );
   }
@@ -55,6 +62,7 @@ function WorkspaceView() {
           <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground font-sans selection:bg-primary/30">
             <Sidebar
               onOpenSettings={() => setIsSettingsOpen(true)}
+              onOpenProjects={handleBackToProjects}
               onNewIngestion={handleNewIngestion}
               onAddFiles={handleAddFiles}
               isOpen={isMobileMenuOpen}

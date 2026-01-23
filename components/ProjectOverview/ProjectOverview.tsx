@@ -7,6 +7,7 @@ import {
   Plus,
   ChevronDown,
   FolderOpen,
+  Settings,
 } from 'lucide-react';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { Project, ProjectFilter, ProjectSort } from '../../types';
@@ -17,6 +18,7 @@ import { ProjectContextMenu } from './ProjectContextMenu';
 
 interface ProjectOverviewProps {
   onProjectSelect: (project: Project) => void;
+  onOpenSettings?: () => void;
 }
 
 const FILTER_TABS: { id: ProjectFilter; label: string }[] = [
@@ -31,7 +33,7 @@ const SORT_OPTIONS: { id: ProjectSort; label: string }[] = [
   { id: 'sources', label: 'Aantal bronnen' },
 ];
 
-export function ProjectOverview({ onProjectSelect }: ProjectOverviewProps) {
+export function ProjectOverview({ onProjectSelect, onOpenSettings }: ProjectOverviewProps) {
   const navigate = useNavigate();
   const {
     filteredProjects,
@@ -308,6 +310,20 @@ export function ProjectOverview({ onProjectSelect }: ProjectOverviewProps) {
             setContextMenu(null);
           }}
         />
+      )}
+
+      {/* Settings Button - Bottom Left */}
+      {onOpenSettings && (
+        <button
+          onClick={onOpenSettings}
+          className="fixed bottom-6 left-6 flex items-center gap-2 px-4 py-2 bg-card/80 backdrop-blur-sm border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-card transition-all shadow-lg group"
+        >
+          <Settings
+            size={16}
+            className="transition-transform duration-500 group-hover:rotate-90"
+          />
+          <span>Settings</span>
+        </button>
       )}
     </div>
   );
