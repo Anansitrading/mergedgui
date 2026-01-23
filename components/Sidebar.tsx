@@ -1,5 +1,4 @@
-import React from "react";
-import { TerminalSquare, Settings, ServerCog, Bot, X, Sun, Moon } from "lucide-react";
+import { TerminalSquare, Settings, X, Sun, Moon } from "lucide-react";
 import { WorkspaceMode } from "../types";
 import { cn } from "../utils/cn";
 import { useTheme } from "../hooks/useTheme";
@@ -31,22 +30,10 @@ export function Sidebar({
 
   const menuItems = [
     {
-      id: "agents" as WorkspaceMode,
-      icon: Bot,
-      label: "Agents",
-      description: "Let's Build an Agent",
-    },
-    {
       id: "hyperglyph" as WorkspaceMode,
       icon: TerminalSquare,
       label: "Hypervisa",
       description: "Context & Ingestion",
-    },
-    {
-      id: "panopticon" as WorkspaceMode,
-      icon: ServerCog,
-      label: "Panopticon",
-      description: "MCPs & Skills",
     },
   ];
 

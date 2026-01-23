@@ -40,3 +40,27 @@ export interface IngestionConfig {
     tags?: string[];
     description?: string;
 }
+
+// Project Overview Types
+export interface Project {
+    id: string;
+    name: string;
+    icon: ProjectIcon;
+    createdAt: Date;
+    updatedAt: Date;
+    sourceCount: number;
+    isShared: boolean;
+    sharedBy?: string;
+    owner: string;
+    description?: string;
+}
+
+export interface ProjectIcon {
+    type: 'emoji' | 'initials' | 'image';
+    value: string;
+    backgroundColor?: string;
+}
+
+export type ProjectFilter = 'all' | 'mine' | 'shared';
+export type ProjectSort = 'recent' | 'name' | 'sources';
+export type ProjectViewMode = 'grid' | 'list';
