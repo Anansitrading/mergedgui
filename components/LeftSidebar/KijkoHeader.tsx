@@ -9,9 +9,11 @@ export function KijkoHeader({ onClose, showCloseButton = false }: KijkoHeaderPro
   return (
     <div className="p-6 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-          <span className="font-bold text-primary-foreground text-lg">K</span>
-        </div>
+        <img
+          src="/public/favicon.png"
+          alt="Kijko logo"
+          className="w-10 h-10 rounded-md"
+        />
         <div>
           <h1 className="font-bold text-sidebar-foreground tracking-tight">KIJKO</h1>
           <p className="text-xs text-muted-foreground font-mono">

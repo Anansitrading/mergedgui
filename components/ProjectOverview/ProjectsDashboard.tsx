@@ -99,9 +99,11 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings }: ProjectsD
         <div className="flex items-center justify-between px-6 py-4">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
-              <span className="font-bold text-primary-foreground text-xl">K</span>
-            </div>
+            <img
+              src="/public/favicon.png"
+              alt="Kijko logo"
+              className="w-10 h-10 rounded-lg"
+            />
             <span className="font-bold text-xl text-foreground tracking-tight">
               KIJKO
             </span>
