@@ -641,6 +641,12 @@ export function ProjectCreationModal({
     setIsDirty(true);
   }, []);
 
+  // Manual content handler
+  const handleSetManualContent = useCallback((content: string) => {
+    setFormData(prev => ({ ...prev, manualContent: content }));
+    setIsDirty(true);
+  }, []);
+
   // Advanced settings handlers
   const handleChunkingChange = useCallback((strategy: ChunkingStrategy, webhookUrl?: string) => {
     setFormData(prev => ({ ...prev, chunkingStrategy: strategy, webhookUrl }));
@@ -936,6 +942,8 @@ export function ProjectCreationModal({
               onRemoveRepository={handleRemoveRepository}
               files={formData.files || []}
               onSetFiles={handleSetFiles}
+              manualContent={formData.manualContent || ''}
+              onSetManualContent={handleSetManualContent}
               onNext={handleNext}
               onBack={handleBack}
             />

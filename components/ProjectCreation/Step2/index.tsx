@@ -17,6 +17,7 @@ import { cn } from '../../../utils/cn';
 import { Step2A } from './Step2A';
 import { Step2B } from './Step2B';
 import { Step2C } from './Step2C';
+import { Step2D } from './Step2D';
 import { getOAuthConnections } from '../../../services/projectApi';
 import type {
   ProjectType,
@@ -30,7 +31,7 @@ import type {
 // Types
 // =============================================================================
 
-type Step2Variant = '2A' | '2B' | '2C';
+type Step2Variant = '2A' | '2B' | '2C' | '2D';
 
 interface Step2Props {
   // From wizard context
@@ -46,6 +47,10 @@ interface Step2Props {
   // File data
   files: FileInput[];
   onSetFiles: (files: FileInput[]) => void;
+
+  // Manual content data
+  manualContent: string;
+  onSetManualContent: (content: string) => void;
 
   // Navigation
   onNext: () => void;
@@ -63,6 +68,11 @@ function determineVariant(projectType: ProjectType, persona?: PersonaType): Step
   // Files type always shows file upload
   if (projectType === 'files') {
     return '2C';
+  }
+
+  // Manual type shows manual content entry
+  if (projectType === 'manual') {
+    return '2D';
   }
 
   // Maya persona gets batch import
@@ -98,6 +108,12 @@ function getVariantInfo(variant: Step2Variant): {
         description: 'Upload files or folders to analyze',
         icon: <FileUp className="w-5 h-5" />,
       };
+    case '2D':
+      return {
+        title: 'Add Content',
+        description: 'Paste code or add content manually',
+        icon: <FileUp className="w-5 h-5" />,
+      };
   }
 }
 
@@ -112,8 +128,8 @@ interface VariantTabsProps {
 }
 
 function VariantTabs({ currentVariant, onVariantChange, projectType }: VariantTabsProps) {
-  // Don't show tabs if project type is files (only 2C is valid)
-  if (projectType === 'files') {
+  // Don't show tabs if project type is files or manual (only one variant is valid)
+  if (projectType === 'files' || projectType === 'manual') {
     return null;
   }
 
@@ -214,6 +230,8 @@ export function Step2({
   onRemoveRepository,
   files,
   onSetFiles,
+  manualContent,
+  onSetManualContent,
   onNext,
   onBack,
   isNextDisabled: externalIsNextDisabled,
@@ -263,8 +281,13 @@ export function Step2({
       return files.length === 0;
     }
 
+    // For manual type, need at least 10 characters of content
+    if (projectType === 'manual') {
+      return !manualContent || manualContent.trim().length < 10;
+    }
+
     return false;
-  }, [externalIsNextDisabled, projectType, repositories.length, files.length]);
+  }, [externalIsNextDisabled, projectType, repositories.length, files.length, manualContent]);
 
   // Render the appropriate variant
   const renderVariant = () => {
@@ -294,6 +317,13 @@ export function Step2({
           <Step2C
             files={files}
             onSetFiles={onSetFiles}
+          />
+        );
+      case '2D':
+        return (
+          <Step2D
+            manualContent={manualContent}
+            onSetManualContent={onSetManualContent}
           />
         );
     }
@@ -331,6 +361,7 @@ export function Step2({
 export { Step2A } from './Step2A';
 export { Step2B } from './Step2B';
 export { Step2C } from './Step2C';
+export { Step2D } from './Step2D';
 export { RepoInfoCard, RepoInfoCardSkeleton } from './RepoInfoCard';
 export { OAuthButtons, CompactOAuthButton } from './OAuthButtons';
 
