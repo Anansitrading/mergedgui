@@ -8,10 +8,16 @@ import {
   Check,
   Search,
   X,
+  Upload,
+  Folder,
+  ChevronRight,
+  GripVertical,
 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useSourceFiles, formatFileSize, SourceFile } from '../../../../contexts/SourceFilesContext';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
+import { KijkoHeader } from '../../../../components/LeftSidebar';
+import { FileContextMenu, ContextMenuAction } from './FileContextMenu';
 
 interface LeftSidebarProps {
   className?: string;
@@ -27,6 +33,8 @@ function getFileIcon(type: SourceFile['type']) {
       return FileJson;
     case 'markdown':
       return FileText;
+    case 'folder':
+      return Folder;
     default:
       return File;
   }
@@ -49,6 +57,8 @@ function getFileTypeColor(type: SourceFile['type']) {
       return 'text-orange-400';
     case 'python':
       return 'text-green-400';
+    case 'folder':
+      return 'text-blue-300';
     default:
       return 'text-slate-500';
   }
@@ -58,59 +68,190 @@ function getFileTypeColor(type: SourceFile['type']) {
 interface FileListItemProps {
   file: SourceFile;
   isSelected: boolean;
+  isRenaming: boolean;
+  renameValue: string;
   onToggle: (id: string) => void;
+  onContextMenu: (e: React.MouseEvent, file: SourceFile) => void;
+  onDragStart: (e: React.DragEvent, file: SourceFile) => void;
+  onDragOver: (e: React.DragEvent, file: SourceFile) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent, targetFile: SourceFile) => void;
+  onRenameChange: (value: string) => void;
+  onRenameSubmit: () => void;
+  onRenameCancel: () => void;
+  onFolderToggle?: (id: string) => void;
+  isExpanded?: boolean;
+  isDragTarget?: boolean;
+  depth?: number;
 }
 
-const FileListItem = memo(function FileListItem({ file, isSelected, onToggle }: FileListItemProps) {
+const FileListItem = memo(function FileListItem({
+  file,
+  isSelected,
+  isRenaming,
+  renameValue,
+  onToggle,
+  onContextMenu,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
+  onFolderToggle,
+  isExpanded,
+  isDragTarget,
+  depth = 0,
+}: FileListItemProps) {
   const Icon = getFileIcon(file.type);
   const colorClass = getFileTypeColor(file.type);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleClick = useCallback(() => {
-    onToggle(file.id);
-  }, [file.id, onToggle]);
+    if (file.isFolder && onFolderToggle) {
+      onFolderToggle(file.id);
+    } else {
+      onToggle(file.id);
+    }
+  }, [file.id, file.isFolder, onToggle, onFolderToggle]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    onContextMenu(e, file);
+  }, [file, onContextMenu]);
+
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    onDragStart(e, file);
+  }, [file, onDragStart]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    onDragOver(e, file);
+  }, [file, onDragOver]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    onDrop(e, file);
+  }, [file, onDrop]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      onRenameSubmit();
+    } else if (e.key === 'Escape') {
+      onRenameCancel();
+    }
+  }, [onRenameSubmit, onRenameCancel]);
 
   return (
     <div
+      draggable={!isRenaming}
       onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={handleDrop}
       className={cn(
         'flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors group',
         isSelected
           ? 'bg-blue-600/10 hover:bg-blue-600/20'
-          : 'hover:bg-slate-800/50'
+          : 'hover:bg-slate-800/50',
+        isDragTarget && 'bg-blue-500/20 border-t-2 border-blue-500',
+        file.isFolder && isDragTarget && 'bg-blue-500/30'
       )}
+      style={{ paddingLeft: `${12 + depth * 16}px` }}
     >
-      {/* Checkbox */}
-      <div
-        className={cn(
-          'w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors flex-shrink-0',
-          isSelected
-            ? 'bg-blue-600 border-blue-600'
-            : 'border-slate-600 group-hover:border-slate-500'
-        )}
-      >
-        {isSelected && <Check size={8} className="text-white" />}
-      </div>
+      {/* Drag Handle */}
+      <GripVertical
+        size={12}
+        className="flex-shrink-0 text-slate-600 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing"
+      />
+
+      {/* Folder Expand Icon */}
+      {file.isFolder && (
+        <ChevronRight
+          size={12}
+          className={cn(
+            'flex-shrink-0 text-slate-500 transition-transform',
+            isExpanded && 'rotate-90'
+          )}
+        />
+      )}
+
+      {/* Checkbox (not for folders) */}
+      {!file.isFolder && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle(file.id);
+          }}
+          className={cn(
+            'w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors flex-shrink-0',
+            isSelected
+              ? 'bg-blue-600 border-blue-600'
+              : 'border-slate-600 group-hover:border-slate-500'
+          )}
+        >
+          {isSelected && <Check size={8} className="text-white" />}
+        </div>
+      )}
 
       {/* File Icon */}
       <Icon size={14} className={cn('flex-shrink-0', colorClass)} />
 
-      {/* File Name */}
-      <span className="flex-1 text-xs text-slate-300 truncate">
-        {file.name}
-      </span>
+      {/* File Name or Rename Input */}
+      {isRenaming ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={renameValue}
+          onChange={(e) => onRenameChange(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={onRenameSubmit}
+          autoFocus
+          className="flex-1 bg-slate-700 border border-blue-500 rounded px-1 py-0.5 text-xs text-slate-200 focus:outline-none"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span className="flex-1 text-xs text-slate-300 truncate">
+          {file.name}
+        </span>
+      )}
 
-      {/* File Size */}
-      <span className="text-[10px] text-slate-500 flex-shrink-0">
-        {formatFileSize(file.size)}
-      </span>
+      {/* File Size (not for folders) */}
+      {!file.isFolder && (
+        <span className="text-[10px] text-slate-500 flex-shrink-0">
+          {formatFileSize(file.size)}
+        </span>
+      )}
     </div>
   );
 });
+
+// Context menu state type
+interface ContextMenuState {
+  isOpen: boolean;
+  x: number;
+  y: number;
+  file?: SourceFile;
+}
 
 export function LeftSidebar({ className }: LeftSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [dragTargetId, setDragTargetId] = useState<string | null>(null);
+  const [draggedFile, setDraggedFile] = useState<SourceFile | null>(null);
+  const [renamingFileId, setRenamingFileId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    isOpen: false,
+    x: 0,
+    y: 0,
+  });
 
   const {
     files,
@@ -122,16 +263,30 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
     toggleFileSelection,
     selectAll,
     deselectAll,
+    removeFile,
+    renameFile,
+    createFolder,
+    moveFile,
   } = useSourceFiles();
 
   const { openIngestionModal } = useIngestion();
 
+  // Get root level files (no parentId)
+  const rootFiles = useMemo(() => {
+    return files.filter((f) => !f.parentId).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [files]);
+
+  // Get files in a folder
+  const getFilesInFolder = useCallback((folderId: string) => {
+    return files.filter((f) => f.parentId === folderId).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [files]);
+
   // Memoize filtered files to prevent recalculation on every render
   const filteredFiles = useMemo(() => {
-    if (!searchQuery.trim()) return files;
+    if (!searchQuery.trim()) return rootFiles;
     const query = searchQuery.toLowerCase();
     return files.filter((file) => file.name.toLowerCase().includes(query));
-  }, [files, searchQuery]);
+  }, [files, rootFiles, searchQuery]);
 
   // Memoize token estimate
   const tokenEstimate = useMemo(() => Math.round(selectedSize / 4), [selectedSize]);
@@ -185,6 +340,207 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
     setIsSearchOpen(true);
   }, []);
 
+  // Toggle folder expansion
+  const handleFolderToggle = useCallback((folderId: string) => {
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(folderId)) {
+        next.delete(folderId);
+      } else {
+        next.add(folderId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Context menu handlers
+  const handleContextMenu = useCallback((e: React.MouseEvent, file?: SourceFile) => {
+    e.preventDefault();
+    setContextMenu({
+      isOpen: true,
+      x: e.clientX,
+      y: e.clientY,
+      file,
+    });
+  }, []);
+
+  const handleContextMenuClose = useCallback(() => {
+    setContextMenu({ isOpen: false, x: 0, y: 0 });
+  }, []);
+
+  const handleContextMenuAction = useCallback((action: ContextMenuAction['id'], fileId?: string) => {
+    switch (action) {
+      case 'new-file':
+        handleNewIngestion();
+        break;
+      case 'new-folder':
+        const folderName = prompt('Enter folder name:');
+        if (folderName) {
+          createFolder(folderName, contextMenu.file?.isFolder ? contextMenu.file.id : contextMenu.file?.parentId);
+        }
+        break;
+      case 'rename':
+        if (fileId) {
+          const file = files.find((f) => f.id === fileId);
+          if (file) {
+            setRenamingFileId(fileId);
+            setRenameValue(file.name);
+          }
+        }
+        break;
+      case 'delete':
+        if (fileId) {
+          removeFile(fileId);
+        }
+        break;
+      case 'compress':
+        // TODO: Implement compress functionality
+        console.log('Compress:', fileId);
+        break;
+    }
+  }, [contextMenu.file, createFolder, files, handleNewIngestion, removeFile]);
+
+  // Rename handlers
+  const handleRenameChange = useCallback((value: string) => {
+    setRenameValue(value);
+  }, []);
+
+  const handleRenameSubmit = useCallback(() => {
+    if (renamingFileId && renameValue.trim()) {
+      renameFile(renamingFileId, renameValue.trim());
+    }
+    setRenamingFileId(null);
+    setRenameValue('');
+  }, [renamingFileId, renameValue, renameFile]);
+
+  const handleRenameCancel = useCallback(() => {
+    setRenamingFileId(null);
+    setRenameValue('');
+  }, []);
+
+  // Drag & drop handlers for file reordering
+  const handleFileDragStart = useCallback((e: React.DragEvent, file: SourceFile) => {
+    setDraggedFile(file);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', file.id);
+  }, []);
+
+  const handleFileDragOver = useCallback((e: React.DragEvent, targetFile: SourceFile) => {
+    e.preventDefault();
+    if (draggedFile && draggedFile.id !== targetFile.id) {
+      setDragTargetId(targetFile.id);
+    }
+  }, [draggedFile]);
+
+  const handleFileDragLeave = useCallback(() => {
+    setDragTargetId(null);
+  }, []);
+
+  const handleFileDrop = useCallback((e: React.DragEvent, targetFile: SourceFile) => {
+    e.preventDefault();
+    if (draggedFile && draggedFile.id !== targetFile.id) {
+      // If dropping on a folder, move into the folder
+      if (targetFile.isFolder) {
+        moveFile(draggedFile.id, targetFile.id);
+        // Expand the folder to show the moved file
+        setExpandedFolders((prev) => new Set([...prev, targetFile.id]));
+      } else {
+        // Otherwise, reorder at the same level
+        moveFile(draggedFile.id, targetFile.parentId || null);
+      }
+    }
+    setDraggedFile(null);
+    setDragTargetId(null);
+  }, [draggedFile, moveFile]);
+
+  // Drop zone handlers for external files
+  const handleDropZoneDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDropZoneDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDropZoneDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      const id = `file-${Date.now()}`;
+      openIngestionModal({
+        id,
+        name: file.name,
+        size: formatFileSizeFromBytes(file.size),
+        sizeBytes: file.size,
+      });
+    }
+  }, [openIngestionModal]);
+
+  // Render file list recursively
+  const renderFileList = useCallback((fileList: SourceFile[], depth = 0) => {
+    return fileList.map((file) => (
+      <div key={file.id}>
+        <FileListItem
+          file={file}
+          isSelected={selectedFileIds.has(file.id)}
+          isRenaming={renamingFileId === file.id}
+          renameValue={renameValue}
+          onToggle={toggleFileSelection}
+          onContextMenu={handleContextMenu}
+          onDragStart={handleFileDragStart}
+          onDragOver={handleFileDragOver}
+          onDragLeave={handleFileDragLeave}
+          onDrop={handleFileDrop}
+          onRenameChange={handleRenameChange}
+          onRenameSubmit={handleRenameSubmit}
+          onRenameCancel={handleRenameCancel}
+          onFolderToggle={handleFolderToggle}
+          isExpanded={expandedFolders.has(file.id)}
+          isDragTarget={dragTargetId === file.id}
+          depth={depth}
+        />
+        {/* Render children if folder is expanded */}
+        {file.isFolder && expandedFolders.has(file.id) && (
+          <div>
+            {renderFileList(getFilesInFolder(file.id), depth + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  }, [
+    selectedFileIds,
+    renamingFileId,
+    renameValue,
+    toggleFileSelection,
+    handleContextMenu,
+    handleFileDragStart,
+    handleFileDragOver,
+    handleFileDragLeave,
+    handleFileDrop,
+    handleRenameChange,
+    handleRenameSubmit,
+    handleRenameCancel,
+    handleFolderToggle,
+    expandedFolders,
+    dragTargetId,
+    getFilesInFolder,
+  ]);
+
+  // Handle right-click on empty area
+  const handleListContextMenu = useCallback((e: React.MouseEvent) => {
+    // Only trigger if clicking on the list container, not on a file
+    if (e.target === e.currentTarget) {
+      handleContextMenu(e);
+    }
+  }, [handleContextMenu]);
+
   return (
     <aside
       className={cn(
@@ -192,8 +548,11 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
         className
       )}
     >
-      {/* Header */}
-      <div className="p-3 border-b border-[#1e293b]">
+      {/* Kijko Header with Logo */}
+      <KijkoHeader />
+
+      {/* New Ingestion Button */}
+      <div className="px-3 pb-3 border-b border-[#1e293b]">
         <button
           onClick={handleNewIngestion}
           className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-blue-600/20"
@@ -268,21 +627,17 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
       </div>
 
       {/* Files List */}
-      <div className="flex-1 overflow-y-auto">
+      <div
+        className="flex-1 overflow-y-auto"
+        onContextMenu={handleListContextMenu}
+      >
         {filteredFiles.length === 0 ? (
           <div className="p-4 text-center text-sm text-slate-500">
             {searchQuery ? 'No files match your search' : 'No source files'}
           </div>
         ) : (
           <div className="py-1">
-            {filteredFiles.map((file) => (
-              <FileListItem
-                key={file.id}
-                file={file}
-                isSelected={selectedFileIds.has(file.id)}
-                onToggle={toggleFileSelection}
-              />
-            ))}
+            {renderFileList(filteredFiles)}
           </div>
         )}
       </div>
@@ -306,6 +661,38 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
           <span>~{tokenEstimate} tokens</span>
         </div>
       </div>
+
+      {/* Drop Zone - Add Files */}
+      <div
+        onDragOver={handleDropZoneDragOver}
+        onDragLeave={handleDropZoneDragLeave}
+        onDrop={handleDropZoneDrop}
+        onClick={handleNewIngestion}
+        className={cn(
+          'mx-3 mb-3 p-4 rounded-lg border-2 border-dashed cursor-pointer transition-all duration-200',
+          'flex flex-col items-center justify-center gap-2',
+          isDragOver
+            ? 'border-blue-500 bg-blue-500/10 text-blue-400'
+            : 'border-slate-600 hover:border-slate-500 text-slate-500 hover:text-slate-400 hover:bg-slate-800/30'
+        )}
+      >
+        <Upload size={20} />
+        <span className="text-xs font-medium">
+          {isDragOver ? 'Drop file here' : 'Drop file or click to add'}
+        </span>
+      </div>
+
+      {/* Context Menu */}
+      {contextMenu.isOpen && (
+        <FileContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          fileId={contextMenu.file?.id}
+          isFolder={contextMenu.file?.isFolder}
+          onAction={handleContextMenuAction}
+          onClose={handleContextMenuClose}
+        />
+      )}
     </aside>
   );
 }

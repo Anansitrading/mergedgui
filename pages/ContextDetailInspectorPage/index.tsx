@@ -11,7 +11,7 @@ import type { TabType } from '../../types/contextInspector';
 // Valid tab values
 const VALID_TABS: TabType[] = ['overview', 'compression', 'enrichments', 'users', 'changelog'];
 
-export function ContextDetailInspectorPage() {
+export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: project, isLoading, error } = useProjectData(projectId);
@@ -94,4 +94,4 @@ export function ContextDetailInspectorPage() {
   );
 }
 
-export default ContextDetailInspectorPage;
+export default ProjectDetailPage;

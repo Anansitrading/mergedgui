@@ -6,7 +6,10 @@ export interface SourceFile {
   name: string;
   extension: string;
   size: number; // in bytes
-  type: 'typescript' | 'javascript' | 'json' | 'markdown' | 'css' | 'html' | 'python' | 'other';
+  type: 'typescript' | 'javascript' | 'json' | 'markdown' | 'css' | 'html' | 'python' | 'other' | 'folder';
+  isFolder?: boolean;
+  parentId?: string | null; // null or undefined = root level
+  order?: number; // for drag & drop ordering
 }
 
 interface SourceFilesState {
@@ -23,7 +26,11 @@ type SourceFilesAction =
   | { type: 'SELECT_ALL' }
   | { type: 'DESELECT_ALL' }
   | { type: 'SET_SELECTED_FILES'; payload: string[] }
-  | { type: 'SET_LOADING'; payload: boolean };
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'RENAME_FILE'; payload: { id: string; newName: string } }
+  | { type: 'CREATE_FOLDER'; payload: { name: string; parentId?: string | null } }
+  | { type: 'MOVE_FILE'; payload: { fileId: string; targetFolderId: string | null } }
+  | { type: 'REORDER_FILES'; payload: { fileId: string; newOrder: number; parentId?: string | null } };
 
 // Local storage key
 const SOURCE_FILES_STORAGE_KEY = 'source_files_selection';
@@ -178,6 +185,80 @@ function sourceFilesReducer(state: SourceFilesState, action: SourceFilesAction):
         ...state,
         isLoading: action.payload,
       };
+    case 'RENAME_FILE': {
+      const { id, newName } = action.payload;
+      return {
+        ...state,
+        files: state.files.map((f) =>
+          f.id === id
+            ? {
+                ...f,
+                name: newName,
+                extension: f.isFolder ? '' : newName.split('.').pop() || f.extension,
+              }
+            : f
+        ),
+      };
+    }
+    case 'CREATE_FOLDER': {
+      const { name, parentId } = action.payload;
+      const newFolder: SourceFile = {
+        id: `folder-${Date.now()}`,
+        name,
+        extension: '',
+        size: 0,
+        type: 'folder',
+        isFolder: true,
+        parentId: parentId || null,
+        order: state.files.filter((f) => f.parentId === (parentId || null)).length,
+      };
+      return {
+        ...state,
+        files: [...state.files, newFolder],
+      };
+    }
+    case 'MOVE_FILE': {
+      const { fileId, targetFolderId } = action.payload;
+      return {
+        ...state,
+        files: state.files.map((f) =>
+          f.id === fileId ? { ...f, parentId: targetFolderId } : f
+        ),
+      };
+    }
+    case 'REORDER_FILES': {
+      const { fileId, newOrder, parentId } = action.payload;
+      const filesInSameParent = state.files
+        .filter((f) => f.parentId === (parentId || null))
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      const fileToMove = state.files.find((f) => f.id === fileId);
+      if (!fileToMove) return state;
+
+      // Reorder files in the same parent
+      const updatedFiles = state.files.map((f) => {
+        if (f.id === fileId) {
+          return { ...f, order: newOrder, parentId: parentId || null };
+        }
+        if (f.parentId === (parentId || null) && f.id !== fileId) {
+          const currentOrder = f.order || 0;
+          const oldOrder = fileToMove.order || 0;
+
+          if (oldOrder < newOrder && currentOrder > oldOrder && currentOrder <= newOrder) {
+            return { ...f, order: currentOrder - 1 };
+          }
+          if (oldOrder > newOrder && currentOrder >= newOrder && currentOrder < oldOrder) {
+            return { ...f, order: currentOrder + 1 };
+          }
+        }
+        return f;
+      });
+
+      return {
+        ...state,
+        files: updatedFiles,
+      };
+    }
     default:
       return state;
   }
@@ -200,6 +281,12 @@ interface SourceFilesContextValue {
   addFiles: (files: SourceFile[]) => void;
   removeFile: (fileId: string) => void;
   setFiles: (files: SourceFile[]) => void;
+  renameFile: (fileId: string, newName: string) => void;
+  createFolder: (name: string, parentId?: string | null) => void;
+  moveFile: (fileId: string, targetFolderId: string | null) => void;
+  reorderFiles: (fileId: string, newOrder: number, parentId?: string | null) => void;
+  getFilesInFolder: (folderId: string | null) => SourceFile[];
+  getFolders: () => SourceFile[];
 }
 
 // Create context
@@ -252,6 +339,32 @@ export function SourceFilesProvider({ children }: SourceFilesProviderProps) {
     dispatch({ type: 'SET_FILES', payload: files });
   }, []);
 
+  const renameFile = useCallback((fileId: string, newName: string) => {
+    dispatch({ type: 'RENAME_FILE', payload: { id: fileId, newName } });
+  }, []);
+
+  const createFolder = useCallback((name: string, parentId?: string | null) => {
+    dispatch({ type: 'CREATE_FOLDER', payload: { name, parentId } });
+  }, []);
+
+  const moveFile = useCallback((fileId: string, targetFolderId: string | null) => {
+    dispatch({ type: 'MOVE_FILE', payload: { fileId, targetFolderId } });
+  }, []);
+
+  const reorderFiles = useCallback((fileId: string, newOrder: number, parentId?: string | null) => {
+    dispatch({ type: 'REORDER_FILES', payload: { fileId, newOrder, parentId } });
+  }, []);
+
+  const getFilesInFolder = useCallback((folderId: string | null) => {
+    return state.files
+      .filter((f) => f.parentId === folderId)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+  }, [state.files]);
+
+  const getFolders = useCallback(() => {
+    return state.files.filter((f) => f.isFolder);
+  }, [state.files]);
+
   // Computed values
   const selectedFiles = useMemo(
     () => state.files.filter((f) => state.selectedFileIds.has(f.id)),
@@ -290,6 +403,12 @@ export function SourceFilesProvider({ children }: SourceFilesProviderProps) {
       addFiles,
       removeFile,
       setFiles,
+      renameFile,
+      createFolder,
+      moveFile,
+      reorderFiles,
+      getFilesInFolder,
+      getFolders,
     }),
     [
       state.files,
@@ -307,6 +426,12 @@ export function SourceFilesProvider({ children }: SourceFilesProviderProps) {
       addFiles,
       removeFile,
       setFiles,
+      renameFile,
+      createFolder,
+      moveFile,
+      reorderFiles,
+      getFilesInFolder,
+      getFolders,
     ]
   );
 
