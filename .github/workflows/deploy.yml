@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - Kijko-MVP
+  workflow_dispatch:
 
 jobs:
   deploy:
