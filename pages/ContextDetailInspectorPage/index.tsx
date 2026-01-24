@@ -68,7 +68,7 @@ export function ProjectDetailPage() {
       <div className="h-screen w-full bg-[#0a0e1a] flex overflow-hidden">
         {/* Left Sidebar - Source Files */}
         <PanelErrorBoundary panelName="Source Files">
-          <LeftSidebar className="w-[240px] flex-shrink-0" />
+          <LeftSidebar className="w-[240px] flex-shrink-0" projectName={project.name} />
         </PanelErrorBoundary>
 
         {/* Main Content - Tabs and Chat */}

@@ -42,6 +42,14 @@ export interface IngestionConfig {
 }
 
 // Project Overview Types
+export interface ProjectLastActiveUser {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatar?: string;
+}
+
 export interface Project {
     id: string;
     name: string;
@@ -53,6 +61,9 @@ export interface Project {
     sharedBy?: string;
     owner: string;
     description?: string;
+    label?: string;
+    color?: string;
+    lastActiveUser?: ProjectLastActiveUser;
 }
 
 export interface ProjectIcon {

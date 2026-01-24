@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wrench, X, Check, Pencil, ArrowLeft } from 'lucide-react';
+import { Wrench, X, Check, Pencil, ArrowLeft, Share2 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 
 interface ProjectHeaderProps {
   projectName: string;
   onNameChange?: (newName: string) => void;
+  onShare?: () => void;
   isLive?: boolean;
   className?: string;
 }
@@ -13,6 +14,7 @@ interface ProjectHeaderProps {
 export function ProjectHeader({
   projectName,
   onNameChange,
+  onShare,
   isLive = true,
   className,
 }: ProjectHeaderProps) {
@@ -160,8 +162,27 @@ export function ProjectHeader({
         )}
       </div>
 
-      {/* Right side: Status indicator */}
-      <div className="flex items-center flex-shrink-0">
+      {/* Right side: Share button + Status indicator */}
+      <div className="flex items-center gap-3 flex-shrink-0">
+        {/* Share button */}
+        {onShare && (
+          <button
+            onClick={onShare}
+            className={cn(
+              'flex items-center gap-2 px-3 h-8 rounded-lg',
+              'text-gray-300 hover:text-white',
+              'bg-white/5 hover:bg-white/10 border border-white/10',
+              'transition-colors duration-150',
+              'focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+            )}
+            title="Share project"
+            aria-label="Share project"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="text-sm font-medium">Share</span>
+          </button>
+        )}
+
         {/* Live status indicator */}
         {isLive && (
           <div className="flex items-center gap-2">

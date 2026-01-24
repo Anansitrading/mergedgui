@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { FolderOpen, Pencil, Share2, Trash2, Crown, Shield, Edit, Eye, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { FolderOpen, Share2, Trash2, Crown, Shield, Edit, Eye, Loader2, Settings2 } from 'lucide-react';
 import { Project } from '../../types';
 import { useProjectUsers, ProjectUserWithTime } from '../../hooks/useProjectSharing';
 import { cn } from '../../utils/cn';
+import { FolderSettingsPanel } from './FolderSettingsPanel';
 
 interface ProjectContextMenuProps {
   project: Project;
@@ -11,8 +12,8 @@ interface ProjectContextMenuProps {
   onClose: () => void;
   onOpen: () => void;
   onDelete: () => void;
-  onRename?: () => void;
   onShare?: () => void;
+  onUpdateProject?: (updates: Partial<Project>) => void;
 }
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
@@ -36,22 +37,32 @@ export function ProjectContextMenu({
   onClose,
   onOpen,
   onDelete,
-  onRename,
   onShare,
+  onUpdateProject,
 }: ProjectContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const folderSettingsRef = useRef<HTMLDivElement>(null);
   const { users, isLoading, userCount } = useProjectUsers(project.id);
+  const [showFolderSettings, setShowFolderSettings] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const isInsideMenu = menuRef.current?.contains(target);
+      const isInsideFolderSettings = folderSettingsRef.current?.contains(target);
+
+      if (!isInsideMenu && !isInsideFolderSettings) {
         onClose();
       }
     };
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose();
+        if (showFolderSettings) {
+          setShowFolderSettings(false);
+        } else {
+          onClose();
+        }
       }
     };
 
@@ -62,7 +73,7 @@ export function ProjectContextMenu({
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [onClose]);
+  }, [onClose, showFolderSettings]);
 
   // Adjust position to keep menu within viewport - account for users list
   const menuHeight = 200 + (users.length * 56); // Base height + user rows
@@ -78,11 +89,10 @@ export function ProjectContextMenu({
       onClick: onOpen,
     },
     {
-      icon: Pencil,
-      label: 'Rename',
+      icon: Settings2,
+      label: 'Folder settings',
       onClick: () => {
-        onRename?.();
-        onClose();
+        setShowFolderSettings(true);
       },
     },
     {
@@ -101,57 +111,76 @@ export function ProjectContextMenu({
     },
   ];
 
+  const handleFolderSettingsSave = (updates: Partial<Project>) => {
+    onUpdateProject?.(updates);
+    setShowFolderSettings(false);
+  };
+
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-50 w-72 bg-card border border-border rounded-lg shadow-xl overflow-hidden"
-      style={{
-        left: adjustedPosition.x,
-        top: adjustedPosition.y,
-      }}
-    >
-      {/* Project Name Header */}
-      <div className="px-3 py-2 border-b border-border">
-        <p className="text-xs text-muted-foreground truncate">{project.name}</p>
-      </div>
-
-      {/* Menu Items */}
-      <div className="py-1 border-b border-border">
-        {menuItems.map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={index}
-              onClick={item.onClick}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                item.destructive
-                  ? 'text-destructive hover:bg-destructive/10'
-                  : 'text-foreground hover:bg-muted'
-              }`}
-            >
-              <Icon size={16} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Current Users Section */}
-      <div className="py-2">
-        <div className="px-3 py-1.5 flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Current Users ({userCount})
-          </span>
-          {isLoading && <Loader2 size={12} className="text-muted-foreground animate-spin" />}
+    <>
+      <div
+        ref={menuRef}
+        className="fixed z-50 w-72 bg-card border border-border rounded-lg shadow-xl overflow-hidden"
+        style={{
+          left: adjustedPosition.x,
+          top: adjustedPosition.y,
+        }}
+      >
+        {/* Project Name Header */}
+        <div className="px-3 py-2 border-b border-border">
+          <p className="text-xs text-muted-foreground truncate">{project.name}</p>
         </div>
 
-        <div className="max-h-[220px] overflow-y-auto">
-          {users.map((user) => (
-            <UserRow key={user.id} user={user} />
-          ))}
+        {/* Menu Items */}
+        <div className="py-1 border-b border-border">
+          {menuItems.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={index}
+                onClick={item.onClick}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  item.destructive
+                    ? 'text-destructive hover:bg-destructive/10'
+                    : 'text-foreground hover:bg-muted'
+                }`}
+              >
+                <Icon size={16} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Current Users Section */}
+        <div className="py-2">
+          <div className="px-3 py-1.5 flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Current Users ({userCount})
+            </span>
+            {isLoading && <Loader2 size={12} className="text-muted-foreground animate-spin" />}
+          </div>
+
+          <div className="max-h-[220px] overflow-y-auto">
+            {users.map((user) => (
+              <UserRow key={user.id} user={user} />
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Folder Settings Panel - Flyout */}
+      {showFolderSettings && (
+        <div ref={folderSettingsRef}>
+          <FolderSettingsPanel
+            project={project}
+            position={{ x: adjustedPosition.x + 280, y: adjustedPosition.y }}
+            onClose={() => setShowFolderSettings(false)}
+            onSave={handleFolderSettingsSave}
+          />
+        </div>
+      )}
+    </>
   );
 }
 

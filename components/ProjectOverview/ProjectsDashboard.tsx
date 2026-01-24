@@ -49,6 +49,7 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings }: ProjectsD
     setSearchQuery,
     createProject,
     deleteProject,
+    updateProject,
   } = useProjects();
 
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -322,6 +323,9 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings }: ProjectsD
           onShare={() => {
             setUserManagementProject(contextMenu.project);
             setContextMenu(null);
+          }}
+          onUpdateProject={(updates) => {
+            updateProject(contextMenu.project.id, updates);
           }}
         />
       )}

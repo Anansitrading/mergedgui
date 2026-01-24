@@ -20,6 +20,7 @@ import { FileContextMenu, ContextMenuAction } from './FileContextMenu';
 
 interface LeftSidebarProps {
   className?: string;
+  projectName?: string;
 }
 
 // File type icon mapping
@@ -218,11 +219,12 @@ interface ContextMenuState {
   file?: SourceFile;
 }
 
-export function LeftSidebar({ className }: LeftSidebarProps) {
+export function LeftSidebar({ className, projectName = 'Project' }: LeftSidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isRootExpanded, setIsRootExpanded] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [dragTargetId, setDragTargetId] = useState<string | null>(null);
   const [draggedFile, setDraggedFile] = useState<SourceFile | null>(null);
@@ -587,7 +589,29 @@ export function LeftSidebar({ className }: LeftSidebarProps) {
           </div>
         ) : (
           <div className="py-1">
-            {renderFileList(filteredFiles)}
+            {/* Root Project Folder */}
+            <div
+              onClick={() => setIsRootExpanded(!isRootExpanded)}
+              className="flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors hover:bg-slate-800/50 group"
+            >
+              <ChevronRight
+                size={12}
+                className={cn(
+                  'flex-shrink-0 text-slate-500 transition-transform',
+                  isRootExpanded && 'rotate-90'
+                )}
+              />
+              <Folder size={14} className="flex-shrink-0 text-blue-400" />
+              <span className="flex-1 text-xs text-slate-300 font-medium truncate">
+                {projectName}
+              </span>
+            </div>
+            {/* Files inside root folder */}
+            {isRootExpanded && (
+              <div>
+                {renderFileList(filteredFiles, 1)}
+              </div>
+            )}
           </div>
         )}
       </div>

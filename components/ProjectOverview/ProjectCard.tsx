@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Globe, MoreVertical, Calendar, FileText } from 'lucide-react';
-import { Project } from '../../types';
+import { Project, ProjectLastActiveUser } from '../../types';
 import { cn } from '../../utils/cn';
 
 interface ProjectCardProps {
@@ -50,6 +50,47 @@ function formatDate(date: Date): string {
   });
 }
 
+// User Preview Component with Tooltip
+function UserPreview({ user }: { user: ProjectLastActiveUser }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  // Generate initials from first and last name
+  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+  const fullName = `${user.firstName} ${user.lastName}`;
+
+  return (
+    <div
+      className="relative cursor-pointer"
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {/* Avatar */}
+      {user.avatar ? (
+        <img
+          src={user.avatar}
+          alt={fullName}
+          className="w-7 h-7 rounded-full object-cover border-2 border-primary/30"
+        />
+      ) : (
+        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-[10px] font-semibold text-white border-2 border-primary/30 shadow-sm">
+          {initials}
+        </div>
+      )}
+
+      {/* Tooltip */}
+      {showTooltip && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none">
+          <div className="px-2.5 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap">
+            {fullName}
+            {/* Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProjectCard({ project, viewMode, onClick, onMenuClick }: ProjectCardProps) {
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -66,9 +107,22 @@ export function ProjectCard({ project, viewMode, onClick, onMenuClick }: Project
         <ProjectIcon icon={project.icon} />
 
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-            {project.name}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+              {project.name}
+            </h3>
+            {project.label && (
+              <span
+                className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full shrink-0"
+                style={{
+                  backgroundColor: `${project.color || '#3b82f6'}20`,
+                  color: project.color || '#3b82f6',
+                }}
+              >
+                {project.label}
+              </span>
+            )}
+          </div>
           {project.description && (
             <p className="text-sm text-muted-foreground truncate mt-0.5">
               {project.description}
@@ -86,6 +140,11 @@ export function ProjectCard({ project, viewMode, onClick, onMenuClick }: Project
             <FileText size={14} />
             <span>{project.sourceCount} sources</span>
           </div>
+
+          {/* User Preview */}
+          {project.lastActiveUser && (
+            <UserPreview user={project.lastActiveUser} />
+          )}
 
           {project.isShared && (
             <div className="flex items-center gap-1.5 text-primary">
@@ -119,8 +178,23 @@ export function ProjectCard({ project, viewMode, onClick, onMenuClick }: Project
         <MoreVertical size={16} />
       </button>
 
+      {/* Label Badge */}
+      {project.label && (
+        <div className="absolute top-3 left-3">
+          <span
+            className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full"
+            style={{
+              backgroundColor: `${project.color || '#3b82f6'}20`,
+              color: project.color || '#3b82f6',
+            }}
+          >
+            {project.label}
+          </span>
+        </div>
+      )}
+
       {/* Icon */}
-      <div className="mb-4">
+      <div className={cn("mb-4", project.label && "mt-4")}>
         <ProjectIcon icon={project.icon} />
       </div>
 
@@ -137,9 +211,16 @@ export function ProjectCard({ project, viewMode, onClick, onMenuClick }: Project
           {formatDate(project.updatedAt)} · {project.sourceCount} sources
         </div>
 
-        {project.isShared && (
-          <Globe size={14} className="text-muted-foreground" />
-        )}
+        <div className="flex items-center gap-2">
+          {/* User Preview */}
+          {project.lastActiveUser && (
+            <UserPreview user={project.lastActiveUser} />
+          )}
+
+          {project.isShared && (
+            <Globe size={14} className="text-muted-foreground" />
+          )}
+        </div>
       </div>
     </div>
   );

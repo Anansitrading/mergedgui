@@ -18,6 +18,14 @@ const MOCK_PROJECTS: Project[] = [
     sharedBy: 'Marketing Team',
     owner: 'marketing@kijko.io',
     description: 'Comprehensive analysis of user behavior and market trends',
+    label: 'Marketing',
+    color: '#7c3aed',
+    lastActiveUser: {
+      id: 'user-1',
+      firstName: 'Jane',
+      lastName: 'Smith',
+      email: 'jane@example.com',
+    },
   },
   {
     id: '2',
@@ -33,6 +41,14 @@ const MOCK_PROJECTS: Project[] = [
     isShared: false,
     owner: 'current-user',
     description: 'System architecture and design documentation',
+    label: 'Engineering',
+    color: '#2563eb',
+    lastActiveUser: {
+      id: 'user-2',
+      firstName: 'Bob',
+      lastName: 'Johnson',
+      email: 'bob@example.com',
+    },
   },
   {
     id: '3',
@@ -49,6 +65,13 @@ const MOCK_PROJECTS: Project[] = [
     sharedBy: 'Product Team',
     owner: 'product@kijko.io',
     description: 'Sprint planning documents and retrospectives',
+    color: '#059669',
+    lastActiveUser: {
+      id: 'user-3',
+      firstName: 'Alice',
+      lastName: 'Brown',
+      email: 'alice@example.com',
+    },
   },
 ];
 

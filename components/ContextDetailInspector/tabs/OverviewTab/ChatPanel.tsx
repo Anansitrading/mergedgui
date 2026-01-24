@@ -99,11 +99,8 @@ export function ChatPanel({
             : 'h-full rounded-lg'
         )}
       >
-        {/* Header - Repository Name with Expand Button */}
-        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-          <h4 className="text-sm font-medium text-white truncate flex-1">
-            {contextName}
-          </h4>
+        {/* Header - Expand Button */}
+        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-end">
           <button
             onClick={toggleExpand}
             className={cn(

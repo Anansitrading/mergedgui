@@ -6,6 +6,7 @@ import { PageOverviewTab } from './PageOverviewTab';
 import { CompressionTab } from '../../../../components/ContextDetailInspector/tabs/CompressionTab';
 import { EnrichmentsTab } from '../../../../components/ContextDetailInspector/tabs/EnrichmentsTab';
 import { ChangelogTab } from '../../../../components/ContextDetailInspector/tabs/ChangelogTab';
+import { ShareModal } from '../../../../components/ContextDetailInspector/modals/ShareModal';
 import type { TabType, ContextItem } from '../../../../types/contextInspector';
 
 interface MainContentProps {
@@ -42,6 +43,9 @@ export function MainContent({
 
   // Project name state for editing
   const [currentProjectName, setCurrentProjectName] = useState(projectName);
+
+  // Share modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Sync with initialTab when it changes (e.g., browser back/forward)
   useEffect(() => {
@@ -118,6 +122,7 @@ export function MainContent({
       <ProjectHeader
         projectName={currentProjectName}
         onNameChange={handleNameChange}
+        onShare={() => setIsShareModalOpen(true)}
         isLive={true}
       />
 
@@ -131,6 +136,14 @@ export function MainContent({
       <div className="flex-1 overflow-hidden">
         {renderTabContent()}
       </div>
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        projectId={projectId}
+        projectName={currentProjectName}
+      />
     </main>
   );
 }
