@@ -31,7 +31,7 @@ export interface IngestionConfig {
     fileId: string;
     fileName: string;
     displayName: string;
-    processingMode: 'compress' | 'compress_enrich';
+    processingMode: 'none' | 'compress' | 'compress_enrich';
     codebase: {
         type: 'existing' | 'new';
         id?: string;

@@ -431,6 +431,7 @@ export function HypervisaView() {
             setSelectedFile(null);
           }}
           file={selectedFile}
+          projectName="Context Store"
           onSubmit={handleIngestionSubmit}
         />
       )}

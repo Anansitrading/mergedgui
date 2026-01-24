@@ -89,7 +89,7 @@ export function ProjectDetailPage() {
       </div>
 
       {/* Ingestion Modal */}
-      <IngestionModal />
+      <IngestionModal projectName={project.name} />
     </>
   );
 }

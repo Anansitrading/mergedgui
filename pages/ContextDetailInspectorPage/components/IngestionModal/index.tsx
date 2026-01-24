@@ -39,7 +39,11 @@ function getExtension(filename: string): string {
   return filename.split('.').pop() || '';
 }
 
-export function IngestionModal() {
+interface IngestionModalProps {
+  projectName: string;
+}
+
+export function IngestionModal({ projectName }: IngestionModalProps) {
   const { isModalOpen, selectedFile, closeIngestionModal } = useIngestion();
   const { addFiles } = useSourceFiles();
 
@@ -81,6 +85,7 @@ export function IngestionModal() {
         name: selectedFile.name,
         size: selectedFile.size,
       }}
+      projectName={projectName}
       onSubmit={handleSubmit}
     />
   );

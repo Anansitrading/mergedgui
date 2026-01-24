@@ -9,6 +9,7 @@ import {
   Package,
   Sparkles,
   AlertTriangle,
+  FileX,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { IngestionConfig } from "../../types";
@@ -25,6 +26,7 @@ interface IngestionWizardProps {
     name: string;
     size: string;
   };
+  projectName: string;
   onSubmit: (config: IngestionConfig) => Promise<void>;
 }
 
@@ -56,7 +58,7 @@ function getInitialState(file: { id: string; name: string }): WizardState {
       fileId: file.id,
       fileName: file.name,
       displayName: file.name,
-      processingMode: "compress",
+      processingMode: "none",
       codebase: { type: "existing", name: "" },
       tags: [],
       description: "",
@@ -259,20 +261,26 @@ function Step1ProcessingMode({
   value,
   onChange,
 }: {
-  value: "compress" | "compress_enrich";
-  onChange: (mode: "compress" | "compress_enrich") => void;
+  value: "none" | "compress" | "compress_enrich";
+  onChange: (mode: "none" | "compress" | "compress_enrich") => void;
 }) {
   const options = [
     {
+      id: "none" as const,
+      icon: FileX,
+      title: "Uncompressed",
+      description: "Keep the file as-is without any processing",
+    },
+    {
       id: "compress" as const,
       icon: Package,
-      title: "Compress Only",
+      title: "Compress",
       description: "Basic compression for context efficiency",
     },
     {
       id: "compress_enrich" as const,
       icon: Sparkles,
-      title: "Compress + Enrich",
+      title: "Compress and Enrich",
       description: "AI-powered metadata extraction, summaries, tags, and key concepts",
     },
   ];
@@ -290,7 +298,7 @@ function Step1ProcessingMode({
         {options.map((option) => {
           const Icon = option.icon;
           const isSelected = value === option.id;
-          const colorClass = option.id === "compress" ? "blue" : "emerald";
+          const colorClass = option.id === "none" ? "slate" : option.id === "compress" ? "blue" : "emerald";
 
           return (
             <button
@@ -300,7 +308,9 @@ function Step1ProcessingMode({
               className={cn(
                 "w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left",
                 isSelected
-                  ? colorClass === "blue"
+                  ? colorClass === "slate"
+                    ? "border-slate-500 bg-slate-600/10"
+                    : colorClass === "blue"
                     ? "border-blue-500 bg-blue-600/10"
                     : "border-emerald-500 bg-emerald-600/10"
                   : "border-slate-700 bg-slate-800/50 hover:border-slate-600"
@@ -310,7 +320,9 @@ function Step1ProcessingMode({
                 className={cn(
                   "p-3 rounded-lg",
                   isSelected
-                    ? colorClass === "blue"
+                    ? colorClass === "slate"
+                      ? "bg-slate-600/20 text-slate-300"
+                      : colorClass === "blue"
                       ? "bg-blue-600/20 text-blue-400"
                       : "bg-emerald-600/20 text-emerald-400"
                     : "bg-slate-700 text-slate-400"
@@ -330,7 +342,9 @@ function Step1ProcessingMode({
                 className={cn(
                   "w-5 h-5 rounded-full border-2 flex items-center justify-center",
                   isSelected
-                    ? colorClass === "blue"
+                    ? colorClass === "slate"
+                      ? "border-slate-500 bg-slate-500"
+                      : colorClass === "blue"
                       ? "border-blue-500 bg-blue-500"
                       : "border-emerald-500 bg-emerald-500"
                     : "border-slate-600"
@@ -353,18 +367,14 @@ function Step1ProcessingMode({
 function Step2FileMetadata({
   displayName,
   tags,
-  description,
   onDisplayNameChange,
   onTagsChange,
-  onDescriptionChange,
   errors,
 }: {
   displayName: string;
   tags: string[];
-  description: string;
   onDisplayNameChange: (name: string) => void;
   onTagsChange: (tags: string[]) => void;
-  onDescriptionChange: (desc: string) => void;
   errors: Record<string, string>;
 }) {
   return (
@@ -406,20 +416,6 @@ function Step2FileMetadata({
         </label>
         <TagInput value={tags} onChange={onTagsChange} />
       </div>
-
-      {/* Description */}
-      <div className="space-y-1.5">
-        <label className="text-xs text-slate-300 font-medium">
-          Description <span className="text-slate-500">(optional)</span>
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
-          placeholder="Add a brief description..."
-          rows={3}
-          className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none resize-none"
-        />
-      </div>
     </div>
   );
 }
@@ -430,10 +426,12 @@ function Step2FileMetadata({
 
 function Step3Confirmation({
   config,
+  projectName,
   isProcessing,
   onStartIngestion,
 }: {
   config: IngestionConfig;
+  projectName: string;
   isProcessing: boolean;
   onStartIngestion: () => void;
 }) {
@@ -443,17 +441,13 @@ function Step3Confirmation({
     {
       label: "Processing",
       value:
-        config.processingMode === "compress"
-          ? "Compress Only"
-          : "Compress + Enrich",
+        config.processingMode === "none"
+          ? "Uncompressed"
+          : config.processingMode === "compress"
+          ? "Compress"
+          : "Compress and Enrich",
     },
-    {
-      label: "Codebase",
-      value:
-        config.codebase.type === "new"
-          ? `New: ${config.codebase.name}`
-          : config.codebase.name,
-    },
+    { label: "Project", value: projectName },
     { label: "Tags", value: config.tags?.join(", ") || "None" },
   ];
 
@@ -524,6 +518,7 @@ export function IngestionWizard({
   isOpen,
   onClose,
   file,
+  projectName,
   onSubmit,
 }: IngestionWizardProps) {
   const [state, dispatch] = useReducer(
@@ -612,15 +607,11 @@ export function IngestionWizard({
             <Step2FileMetadata
               displayName={state.config.displayName}
               tags={state.config.tags || []}
-              description={state.config.description || ""}
               onDisplayNameChange={(displayName) =>
                 dispatch({ type: "UPDATE_CONFIG", payload: { displayName } })
               }
               onTagsChange={(tags) =>
                 dispatch({ type: "UPDATE_CONFIG", payload: { tags } })
-              }
-              onDescriptionChange={(description) =>
-                dispatch({ type: "UPDATE_CONFIG", payload: { description } })
               }
               errors={state.validationErrors}
             />
@@ -628,6 +619,7 @@ export function IngestionWizard({
           {state.currentStep === 3 && (
             <Step3Confirmation
               config={state.config}
+              projectName={projectName}
               isProcessing={state.isProcessing}
               onStartIngestion={handleSubmit}
             />
