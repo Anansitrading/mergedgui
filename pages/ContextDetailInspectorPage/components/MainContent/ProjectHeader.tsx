@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wrench, X, Check, Pencil } from 'lucide-react';
+import { Wrench, X, Check, Pencil, ArrowLeft } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 
 interface ProjectHeaderProps {
@@ -36,7 +36,7 @@ export function ProjectHeader({
     }
   }, [projectName, isEditing]);
 
-  const handleClose = useCallback(() => {
+  const handleBack = useCallback(() => {
     navigate('/');
   }, [navigate]);
 
@@ -78,8 +78,21 @@ export function ProjectHeader({
         className
       )}
     >
-      {/* Left side: Project name with icon */}
+      {/* Left side: Back button, icon, and project name */}
       <div className="flex items-center gap-3 min-w-0 flex-1">
+        {/* Back button */}
+        <button
+          onClick={handleBack}
+          className={cn(
+            'flex-shrink-0 p-2 rounded-lg',
+            'text-gray-400 hover:text-white hover:bg-white/10',
+            'transition-colors duration-150'
+          )}
+          aria-label="Back to project dashboard"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+
         <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
           <Wrench className="w-4 h-4 text-blue-400" />
         </div>
@@ -147,8 +160,8 @@ export function ProjectHeader({
         )}
       </div>
 
-      {/* Right side: Status indicator and close button */}
-      <div className="flex items-center gap-4 flex-shrink-0">
+      {/* Right side: Status indicator */}
+      <div className="flex items-center flex-shrink-0">
         {/* Live status indicator */}
         {isLive && (
           <div className="flex items-center gap-2">
@@ -159,19 +172,6 @@ export function ProjectHeader({
             <span className="text-sm font-medium text-green-400">Live</span>
           </div>
         )}
-
-        {/* Close button */}
-        <button
-          onClick={handleClose}
-          className={cn(
-            'p-2 rounded-lg',
-            'text-gray-400 hover:text-white hover:bg-white/10',
-            'transition-colors duration-150'
-          )}
-          aria-label="Close and return to projects"
-        >
-          <X className="w-5 h-5" />
-        </button>
       </div>
     </header>
   );
