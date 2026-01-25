@@ -159,10 +159,9 @@ export function SkillsTab() {
                   </option>
                 ))}
               </select>
-              <ChevronDown
-                size={16}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-              />
+              <div className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                <ChevronDown size={16} className="text-muted-foreground" />
+              </div>
             </div>
 
             {/* Action Button */}

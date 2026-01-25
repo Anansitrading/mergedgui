@@ -121,8 +121,8 @@ export function IntegrationCard({
     return (
       <div
         className={cn(
-          'bg-secondary border border-border rounded-lg p-4 flex items-center gap-4 transition-all duration-200',
-          'hover:border-border/80 hover:shadow-lg hover:shadow-primary/5'
+          'bg-card/50 border border-border rounded-xl p-4 flex items-center gap-4 transition-all duration-200',
+          'hover:bg-card hover:border-primary/30'
         )}
       >
         {/* App Icon */}
@@ -248,16 +248,16 @@ export function IntegrationCard({
             <button
               onClick={handleConnect}
               disabled={isConnecting}
-              className="flex items-center gap-1.5 text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md h-8 px-3 transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded h-6 px-2 transition-colors disabled:opacity-50"
             >
               {isConnecting ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3 h-3 animate-spin" />
                   Connecting...
                 </>
               ) : (
                 <>
-                  <Link2 className="w-3.5 h-3.5" />
+                  <Link2 className="w-3 h-3" />
                   Connect
                 </>
               )}
@@ -272,8 +272,8 @@ export function IntegrationCard({
   return (
     <div
       className={cn(
-        'bg-secondary border border-border rounded-lg p-4 flex flex-col h-full transition-all duration-200',
-        'hover:border-border/80 hover:shadow-lg hover:shadow-primary/5'
+        'bg-card/50 border border-border rounded-xl p-4 flex flex-col h-full transition-all duration-200',
+        'hover:bg-card hover:border-primary/30'
       )}
     >
       {/* Header */}
@@ -445,16 +445,16 @@ export function IntegrationCard({
           <button
             onClick={handleConnect}
             disabled={isConnecting}
-            className="flex-1 flex items-center justify-center gap-2 text-sm bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-md h-9 px-4 transition-colors disabled:opacity-50"
+            className="flex items-center justify-center gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded h-6 px-2 transition-colors disabled:opacity-50"
           >
             {isConnecting ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3 h-3 animate-spin" />
                 Connecting...
               </>
             ) : (
               <>
-                <Link2 className="w-4 h-4" />
+                <Link2 className="w-3 h-3" />
                 Connect
               </>
             )}

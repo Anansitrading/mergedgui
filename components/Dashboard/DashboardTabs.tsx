@@ -1,5 +1,4 @@
 import { useCallback, useRef } from 'react';
-import { FolderKanban, Puzzle, Sparkles } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { DashboardTabType } from '../../hooks/useTabNavigation';
 
@@ -12,13 +11,12 @@ interface TabConfig {
   id: DashboardTabType;
   label: string;
   shortcut: number;
-  icon: typeof FolderKanban;
 }
 
 const DASHBOARD_TABS: TabConfig[] = [
-  { id: 'projects', label: 'Projects', shortcut: 1, icon: FolderKanban },
-  { id: 'integrations', label: 'Integrations', shortcut: 2, icon: Puzzle },
-  { id: 'skills', label: 'Skills', shortcut: 3, icon: Sparkles },
+  { id: 'projects', label: 'Projects', shortcut: 1 },
+  { id: 'integrations', label: 'Integrations', shortcut: 2 },
+  { id: 'skills', label: 'Skills', shortcut: 3 },
 ];
 
 export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
@@ -80,7 +78,6 @@ export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
       className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg"
     >
       {DASHBOARD_TABS.map((tab, index) => {
-        const Icon = tab.icon;
         const isActive = activeTab === tab.id;
 
         return (
@@ -95,16 +92,16 @@ export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
             onClick={() => onTabChange(tab.id)}
             onKeyDown={(e) => handleKeyDown(e, index)}
             className={cn(
-              'flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-all',
+              'flex items-center gap-2 px-4 py-2 font-medium rounded-md transition-all',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               isActive
                 ? 'bg-card text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             )}
+            style={{ fontSize: '0.9625rem' }}
             title={`${tab.label} (⌘${tab.shortcut})`}
           >
-            <Icon size={16} className={cn(isActive ? 'text-primary' : '')} />
-            <span className="hidden sm:inline">{tab.label}</span>
+            <span>{tab.label}</span>
           </button>
         );
       })}
