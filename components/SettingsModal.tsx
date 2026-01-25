@@ -1,12 +1,13 @@
 // SettingsModal - Main settings modal with full layout
 // Setting Sprint 1, 2, 3, 4, 5, 6, 7, 8, 9, 10: Full Settings Implementation
+// Note: Profile moved to MyProfileModal (task_1_5)
+// Note: General removed - functionality in MyProfileModal
+// Note: Integrations moved to Dashboard tab (task_1_4)
 
 import { X } from "lucide-react";
 import { SettingsLayout } from "./Settings/SettingsLayout";
-import { ProfileSection } from "./Settings/Profile";
 import { NotificationsSection } from "./Settings/Notifications";
 import { SecuritySection, AdvancedSecuritySection } from "./Settings/Security";
-import { IntegrationsSection } from "./Settings/Integrations";
 import { BillingSection } from "./Settings/Billing";
 import { MembersSection } from "./Settings/Members";
 import { AuditLogSection } from "./Settings/AuditLog";
@@ -39,10 +40,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         {/* Content - Full Settings Layout */}
         <div className="flex-1 overflow-hidden">
           <SettingsLayout>
-            <ProfileSection />
             <NotificationsSection />
             <SecuritySection />
-            <IntegrationsSection />
             <BillingSection />
             <MembersSection />
             <AdvancedSecuritySection />
