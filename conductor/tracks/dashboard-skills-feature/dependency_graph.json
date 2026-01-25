@@ -1,0 +1,123 @@
+{
+  "metadata": {
+    "project_name": "Kijko Dashboard Skills Feature",
+    "generated_at": "2026-01-25T00:00:00Z",
+    "total_nodes": 18,
+    "total_edges": 24,
+    "critical_path_length": 8,
+    "detected_patterns": ["Tab Navigation", "Modal Dialogs", "CRUD Operations", "Real-time Updates"]
+  },
+  "nodes": [
+    {"id": "task_0_1", "label": "Environment Validation", "type": "validation", "phase": 0, "abstraction_level": 0, "critical_path": true, "parallel_score": 0.0},
+    {"id": "task_1_1", "label": "Tab Navigation Implementation", "type": "feature", "phase": 1, "abstraction_level": 1, "critical_path": true, "parallel_score": 0.0, "story_points": 5},
+    {"id": "task_1_2", "label": "Header Restructuring", "type": "feature", "phase": 1, "abstraction_level": 1, "critical_path": false, "parallel_score": 0.8, "story_points": 3},
+    {"id": "task_1_3", "label": "User Profile Dropdown", "type": "feature", "phase": 1, "abstraction_level": 1, "critical_path": false, "parallel_score": 0.6, "story_points": 3},
+    {"id": "task_1_4", "label": "Integrations Tab Migration", "type": "migration", "phase": 1, "abstraction_level": 1, "critical_path": true, "parallel_score": 0.4, "story_points": 5},
+    {"id": "task_1_5", "label": "My Profile Migration", "type": "migration", "phase": 1, "abstraction_level": 1, "critical_path": false, "parallel_score": 0.7, "story_points": 3},
+    {"id": "task_2_1", "label": "Database Schema & API", "type": "backend", "phase": 2, "abstraction_level": 1, "critical_path": true, "parallel_score": 0.0, "story_points": 5},
+    {"id": "task_2_2", "label": "Skills Library UI", "type": "frontend", "phase": 2, "abstraction_level": 2, "critical_path": true, "parallel_score": 0.5, "story_points": 8},
+    {"id": "task_2_3", "label": "Create Skill Form", "type": "frontend", "phase": 2, "abstraction_level": 2, "critical_path": true, "parallel_score": 0.6, "story_points": 5},
+    {"id": "task_2_4", "label": "Skill Detail & Edit", "type": "frontend", "phase": 2, "abstraction_level": 2, "critical_path": false, "parallel_score": 0.7, "story_points": 5},
+    {"id": "task_2_5", "label": "Manual Skill Execution", "type": "feature", "phase": 2, "abstraction_level": 2, "critical_path": true, "parallel_score": 0.3, "story_points": 8},
+    {"id": "task_3_1", "label": "Habits Implementation", "type": "feature", "phase": 3, "abstraction_level": 2, "critical_path": true, "parallel_score": 0.5, "story_points": 8},
+    {"id": "task_3_2", "label": "Reflexes Implementation", "type": "feature", "phase": 3, "abstraction_level": 2, "critical_path": false, "parallel_score": 0.6, "story_points": 8},
+    {"id": "task_3_3", "label": "Support Chat Widget UI", "type": "frontend", "phase": 3, "abstraction_level": 2, "critical_path": false, "parallel_score": 0.8, "story_points": 5},
+    {"id": "task_3_4", "label": "Support Chat AI Integration", "type": "backend", "phase": 3, "abstraction_level": 2, "critical_path": false, "parallel_score": 0.6, "story_points": 5},
+    {"id": "task_3_5", "label": "Analytics & Polish", "type": "feature", "phase": 3, "abstraction_level": 2, "critical_path": true, "parallel_score": 0.3, "story_points": 5}
+  ],
+  "edges": [
+    {"from": "task_0_1", "to": "task_1_1", "type": "prerequisite", "flow": "control"},
+    {"from": "task_1_1", "to": "task_1_2", "type": "depends", "flow": "control"},
+    {"from": "task_1_1", "to": "task_1_4", "type": "depends", "flow": "control"},
+    {"from": "task_1_2", "to": "task_1_3", "type": "depends", "flow": "control"},
+    {"from": "task_1_3", "to": "task_1_5", "type": "depends", "flow": "control"},
+    {"from": "task_1_1", "to": "task_2_1", "type": "prerequisite", "flow": "control"},
+    {"from": "task_1_4", "to": "task_2_1", "type": "prerequisite", "flow": "control"},
+    {"from": "task_2_1", "to": "task_2_2", "type": "depends", "flow": "data"},
+    {"from": "task_2_1", "to": "task_2_3", "type": "depends", "flow": "data"},
+    {"from": "task_2_2", "to": "task_2_4", "type": "depends", "flow": "control"},
+    {"from": "task_2_3", "to": "task_2_4", "type": "depends", "flow": "control"},
+    {"from": "task_2_2", "to": "task_2_5", "type": "depends", "flow": "control"},
+    {"from": "task_2_3", "to": "task_2_5", "type": "depends", "flow": "control"},
+    {"from": "task_2_5", "to": "task_3_1", "type": "prerequisite", "flow": "control"},
+    {"from": "task_2_5", "to": "task_3_2", "type": "prerequisite", "flow": "control"},
+    {"from": "task_2_4", "to": "task_3_1", "type": "depends", "flow": "control"},
+    {"from": "task_2_4", "to": "task_3_2", "type": "depends", "flow": "control"},
+    {"from": "task_3_1", "to": "task_3_5", "type": "depends", "flow": "control"},
+    {"from": "task_3_2", "to": "task_3_5", "type": "depends", "flow": "control"},
+    {"from": "task_3_3", "to": "task_3_4", "type": "depends", "flow": "control"},
+    {"from": "task_3_4", "to": "task_3_5", "type": "depends", "flow": "control"}
+  ],
+  "critical_path": ["task_0_1", "task_1_1", "task_1_4", "task_2_1", "task_2_2", "task_2_5", "task_3_1", "task_3_5"],
+  "waves": [
+    {
+      "wave": 0,
+      "type": "SEQUENTIAL",
+      "tasks": ["task_0_1"],
+      "description": "Prerequisites & Validation"
+    },
+    {
+      "wave": 1,
+      "type": "SEQUENTIAL",
+      "tasks": ["task_1_1"],
+      "description": "Tab Navigation Foundation"
+    },
+    {
+      "wave": 2,
+      "type": "ASYNC",
+      "tasks": ["task_1_2", "task_1_4"],
+      "max_agents": 2,
+      "description": "Header & Integrations Migration"
+    },
+    {
+      "wave": 3,
+      "type": "ASYNC",
+      "tasks": ["task_1_3", "task_1_5"],
+      "max_agents": 2,
+      "description": "Profile Dropdown & Migration"
+    },
+    {
+      "wave": 4,
+      "type": "SEQUENTIAL",
+      "tasks": ["task_2_1"],
+      "description": "Database Schema & API Foundation"
+    },
+    {
+      "wave": 5,
+      "type": "ASYNC",
+      "tasks": ["task_2_2", "task_2_3"],
+      "max_agents": 2,
+      "description": "Skills UI & Create Form"
+    },
+    {
+      "wave": 6,
+      "type": "ASYNC",
+      "tasks": ["task_2_4", "task_2_5"],
+      "max_agents": 2,
+      "description": "Skill Detail & Execution"
+    },
+    {
+      "wave": 7,
+      "type": "ASYNC",
+      "tasks": ["task_3_1", "task_3_2", "task_3_3"],
+      "max_agents": 3,
+      "description": "Habits, Reflexes & Support Chat UI"
+    },
+    {
+      "wave": 8,
+      "type": "SEQUENTIAL",
+      "tasks": ["task_3_4", "task_3_5"],
+      "description": "Chat AI Integration & Polish"
+    }
+  ],
+  "architectural_violations": [],
+  "clusters": {
+    "navigation": ["task_1_1", "task_1_2", "task_1_3"],
+    "migration": ["task_1_4", "task_1_5"],
+    "skills_backend": ["task_2_1"],
+    "skills_frontend": ["task_2_2", "task_2_3", "task_2_4", "task_2_5"],
+    "automation": ["task_3_1", "task_3_2"],
+    "support": ["task_3_3", "task_3_4"],
+    "polish": ["task_3_5"]
+  }
+}

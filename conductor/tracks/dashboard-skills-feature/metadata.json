@@ -1,0 +1,40 @@
+{
+  "track_id": "dashboard-skills-feature_20260125",
+  "type": "feature",
+  "status": "pending",
+  "title": "Dashboard Navigation Refactor + Skills Feature",
+  "description": "Refactor dashboard naar tab-based navigatie en implementeer volledige Skills management systeem",
+  "created_at": "2026-01-25T00:00:00Z",
+  "updated_at": "2026-01-25T00:00:00Z",
+  "sprints": 3,
+  "total_story_points": 81,
+  "phases": [
+    {
+      "id": 0,
+      "name": "Validation",
+      "description": "Environment setup and validation",
+      "type": "SEQUENTIAL"
+    },
+    {
+      "id": 1,
+      "name": "Navigation Foundation & Tab Structure",
+      "description": "Tab navigatie met bestaande features gemigreerd",
+      "story_points": 19,
+      "type": "MIXED"
+    },
+    {
+      "id": 2,
+      "name": "Skills Feature Foundation",
+      "description": "Skills library werkend met CRUD operaties en manual execution",
+      "story_points": 31,
+      "type": "MIXED"
+    },
+    {
+      "id": 3,
+      "name": "Habits, Reflexes & Support Chat",
+      "description": "Automation features + AI support chat",
+      "story_points": 31,
+      "type": "MIXED"
+    }
+  ]
+}
