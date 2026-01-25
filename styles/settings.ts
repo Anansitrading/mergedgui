@@ -69,10 +69,10 @@ export const dimensions = {
 } as const;
 
 // Navigation items configuration
+// Note: 'integrations' moved to dedicated Dashboard tab (task_1_4)
+// Note: 'profile' moved to user dropdown modal (task_1_5)
 export const navigationItems: SettingsNavItem[] = [
-  { id: 'profile', label: 'My Profile', icon: 'User' },
   { id: 'general', label: 'General', icon: 'Settings' },
-  { id: 'integrations', label: 'Integrations', icon: 'Puzzle' },
   { id: 'notifications', label: 'Notifications', icon: 'Bell' },
   { id: 'security', label: 'Security and Data', icon: 'Shield' },
   { id: 'billing', label: 'Billing and Usage', icon: 'CreditCard' },
@@ -82,18 +82,12 @@ export const navigationItems: SettingsNavItem[] = [
 ] as const;
 
 // Section titles and descriptions
+// Note: 'integrations' moved to dedicated Dashboard tab (task_1_4)
+// Note: 'profile' moved to user dropdown modal (task_1_5)
 export const sectionConfig: Record<SettingsSection, { title: string; description: string }> = {
-  profile: {
-    title: 'My Profile',
-    description: 'Manage your personal information and preferences',
-  },
   general: {
     title: 'General Settings',
     description: 'Configure general application settings',
-  },
-  integrations: {
-    title: 'Integrations',
-    description: 'Connect and manage third-party integrations',
   },
   notifications: {
     title: 'Notifications',

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { HypervisaView } from "./components/Hypervisa/HypervisaView";
-import { ProjectsDashboard } from "./components/ProjectOverview";
+import { Dashboard } from "./components/Dashboard";
 import { SettingsModal } from "./components/SettingsModal";
 import { ProjectDetailPage } from "./pages/ContextDetailInspectorPage";
 import { RealtimeProvider } from "./contexts/RealtimeContext";
@@ -12,6 +12,7 @@ import { ChatHistoryProvider } from "./contexts/ChatHistoryContext";
 import { ProjectsProvider } from "./contexts/ProjectsContext";
 import { SourceFilesProvider } from "./contexts/SourceFilesContext";
 import { IngestionProvider } from "./contexts/IngestionContext";
+import { SupportChat } from "./components/SupportChat";
 import { Project } from "./types";
 import { Menu, ArrowLeft } from "lucide-react";
 
@@ -38,18 +39,11 @@ function WorkspaceView() {
     setSelectedProject(null);
   };
 
-  // Show project overview when no project is selected
+  // Show Dashboard with tabs when no project is selected
   if (!selectedProject) {
     return (
       <div className="h-screen w-screen overflow-hidden bg-background text-foreground font-sans selection:bg-primary/30">
-        <ProjectsDashboard
-          onProjectSelect={handleProjectSelect}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-        />
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-        />
+        <Dashboard onProjectSelect={handleProjectSelect} />
       </div>
     );
   }
@@ -61,7 +55,6 @@ function WorkspaceView() {
         <SourceFilesProvider>
           <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground font-sans selection:bg-primary/30">
             <Sidebar
-              onOpenSettings={() => setIsSettingsOpen(true)}
               onOpenProjects={handleBackToProjects}
               onNewIngestion={handleNewIngestion}
               onAddFiles={handleAddFiles}
@@ -157,6 +150,8 @@ function App() {
               }
             />
           </Routes>
+          {/* Support Chat Widget - Available on all pages */}
+          <SupportChat />
         </ProjectsProvider>
       </NotificationProvider>
     </SettingsProvider>

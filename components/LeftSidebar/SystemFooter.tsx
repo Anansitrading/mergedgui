@@ -1,4 +1,4 @@
-import { Settings, Sun, Moon, FolderKanban } from 'lucide-react';
+import { Sun, Moon, FolderKanban } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useTheme } from '../../hooks/useTheme';
 import { useAutoSave } from '../../hooks/useAutoSave';
@@ -7,14 +7,12 @@ type SystemStatus = 'optimal' | 'warning' | 'error';
 
 interface SystemFooterProps {
   status?: SystemStatus;
-  onOpenSettings: () => void;
   onOpenProjects?: () => void;
   className?: string;
 }
 
 export function SystemFooter({
   status = 'optimal',
-  onOpenSettings,
   onOpenProjects,
   className
 }: SystemFooterProps) {
@@ -74,24 +72,8 @@ export function SystemFooter({
         </button>
       )}
 
-      {/* Settings and Theme Toggle */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onOpenSettings}
-          className={cn(
-            "flex items-center gap-2",
-            "text-xs text-muted-foreground hover:text-sidebar-foreground",
-            "px-2 py-1",
-            "transition-colors group"
-          )}
-        >
-          <Settings
-            size={14}
-            className="transition-transform duration-500 group-hover:rotate-90"
-          />
-          System Settings
-        </button>
-
+      {/* Theme Toggle */}
+      <div className="flex items-center justify-end px-2">
         <button
           onClick={handleThemeToggle}
           className={cn(

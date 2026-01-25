@@ -12,8 +12,9 @@ import type {
 const SETTINGS_STORAGE_KEY = 'user_settings';
 
 // Initial state
+// Note: 'profile' section moved to user dropdown modal (task_1_5)
 const initialState: SettingsState = {
-  activeSection: 'profile',
+  activeSection: 'general',
   settings: {},
   isLoading: true,
   saveStatus: 'idle',

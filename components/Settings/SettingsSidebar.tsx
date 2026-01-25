@@ -1,8 +1,6 @@
 import React from 'react';
 import {
-  User,
   Settings,
-  Puzzle,
   Bell,
   Shield,
   CreditCard,
@@ -14,10 +12,10 @@ import type { SettingsSidebarProps, SettingsSection } from '../../types/settings
 import { navigationItems, tw } from '../../styles/settings';
 
 // Icon mapping
+// Note: Puzzle icon removed - integrations moved to Dashboard tab (task_1_4)
+// Note: User icon removed - profile moved to user dropdown modal (task_1_5)
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  User,
   Settings,
-  Puzzle,
   Bell,
   Shield,
   CreditCard,

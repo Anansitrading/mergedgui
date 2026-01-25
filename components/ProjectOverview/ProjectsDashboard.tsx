@@ -7,8 +7,8 @@ import {
   Plus,
   ChevronDown,
   FolderOpen,
-  Settings,
 } from 'lucide-react';
+import { UserAvatar } from '../Dashboard/UserAvatar';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { Project, ProjectFilter, ProjectSort } from '../../types';
 import { cn } from '../../utils/cn';
@@ -21,6 +21,8 @@ import type { ProjectCreationForm } from '../../types/project';
 interface ProjectsDashboardProps {
   onProjectSelect: (project: Project) => void;
   onOpenSettings?: () => void;
+  /** When true, hides the main header (logo, search, new button). Used when embedded in Dashboard with tabs. */
+  embedded?: boolean;
 }
 
 const FILTER_TABS: { id: ProjectFilter; label: string }[] = [
@@ -35,7 +37,7 @@ const SORT_OPTIONS: { id: ProjectSort; label: string }[] = [
   { id: 'sources', label: 'Number of sources' },
 ];
 
-export function ProjectsDashboard({ onProjectSelect, onOpenSettings }: ProjectsDashboardProps) {
+export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = false }: ProjectsDashboardProps) {
   const navigate = useNavigate();
   const {
     filteredProjects,
@@ -94,52 +96,61 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings }: ProjectsD
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <header className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
-        {/* Top Bar - Logo and Actions */}
-        <div className="flex items-center justify-between px-6 py-4">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <img
-              src="/public/favicon.png"
-              alt="Kijko logo"
-              className="w-10 h-10 rounded-lg"
-            />
-            <span className="font-bold text-xl text-foreground tracking-tight">
-              KIJKO
-            </span>
-          </div>
-
-          {/* Search and New Button */}
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="relative w-64 hidden md:block">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+      {/* Header - Only show when not embedded */}
+      {!embedded && (
+        <header className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
+          {/* Top Bar - Logo and Actions */}
+          <div className="flex items-center justify-between px-6 py-4">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <img
+                src="/public/favicon.png"
+                alt="Kijko logo"
+                className="w-10 h-10 rounded-lg"
               />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects..."
-                className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-              />
+              <span className="font-bold text-xl text-foreground tracking-tight">
+                KIJKO
+              </span>
             </div>
 
-            {/* New Project Button */}
-            <button
-              onClick={() => setIsNewProjectModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-            >
-              <Plus size={18} />
-              <span>Create new</span>
-            </button>
-          </div>
-        </div>
+            {/* Search and New Button */}
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative w-64 hidden md:block">
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search projects..."
+                  className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                />
+              </div>
 
-        {/* Filter Tabs and View Controls */}
-        <div className="flex items-center justify-between px-6 pb-4">
+              {/* New Project Button */}
+              <button
+                onClick={() => setIsNewProjectModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+              >
+                <Plus size={18} />
+                <span>Create new</span>
+              </button>
+
+              {/* User Avatar */}
+              {onOpenSettings && (
+                <UserAvatar onClick={onOpenSettings} />
+              )}
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Filter Tabs and View Controls */}
+      <div className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-6 py-4">
           {/* Filter Tabs */}
           <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
             {FILTER_TABS.map((tab) => (
@@ -234,7 +245,7 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings }: ProjectsD
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto p-6">
@@ -337,20 +348,6 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings }: ProjectsD
           onClose={() => setUserManagementProject(null)}
           project={userManagementProject}
         />
-      )}
-
-      {/* Settings Button - Bottom Left */}
-      {onOpenSettings && (
-        <button
-          onClick={onOpenSettings}
-          className="fixed bottom-6 left-6 flex items-center gap-2 px-4 py-2 bg-card/80 backdrop-blur-sm border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-card transition-all shadow-lg group"
-        >
-          <Settings
-            size={16}
-            className="transition-transform duration-500 group-hover:rotate-90"
-          />
-          <span>Settings</span>
-        </button>
       )}
     </div>
   );

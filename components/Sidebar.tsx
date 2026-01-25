@@ -8,7 +8,6 @@ import {
 } from "./LeftSidebar";
 
 interface SidebarProps {
-  onOpenSettings: () => void;
   onOpenProjects?: () => void;
   onNewIngestion: () => void;
   onAddFiles: () => void;
@@ -17,7 +16,6 @@ interface SidebarProps {
 }
 
 export function Sidebar({
-  onOpenSettings,
   onOpenProjects,
   onNewIngestion,
   onAddFiles,
@@ -57,7 +55,7 @@ export function Sidebar({
         <AddFilesButton onClick={onAddFiles} />
 
         {/* System Footer */}
-        <SystemFooter onOpenSettings={onOpenSettings} onOpenProjects={onOpenProjects} />
+        <SystemFooter onOpenProjects={onOpenProjects} />
       </aside>
     </>
   );

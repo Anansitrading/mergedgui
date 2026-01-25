@@ -1,5 +1,4 @@
 import React from 'react';
-import { useSettings } from '../../../contexts/SettingsContext';
 import SettingsSection from '../SettingsSection';
 import { SettingsInput } from '../SettingsInput';
 import AvatarUpload from './AvatarUpload';
@@ -9,14 +8,12 @@ import RoleSelect from './RoleSelect';
 import TimezoneSelect from './TimezoneSelect';
 import PasswordChange from './PasswordChange';
 
+/**
+ * ProfileSection - Now deprecated in Settings context
+ * Profile functionality has moved to MyProfileModal (task_1_5)
+ * This component is kept for backwards compatibility and direct usage outside Settings
+ */
 export function ProfileSection() {
-  const { state } = useSettings();
-
-  // Only render when profile section is active
-  if (state.activeSection !== 'profile') {
-    return null;
-  }
-
   return (
     <div className="space-y-8">
       {/* Avatar Section */}
