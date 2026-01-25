@@ -113,37 +113,10 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
               </span>
             </div>
 
-            {/* Search and New Button */}
-            <div className="flex items-center gap-3">
-              {/* Search */}
-              <div className="relative w-64 hidden md:block">
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search projects..."
-                  className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                />
-              </div>
-
-              {/* New Project Button */}
-              <button
-                onClick={() => setIsNewProjectModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-              >
-                <Plus size={18} />
-                <span>Create new</span>
-              </button>
-
-              {/* User Avatar */}
-              {onOpenSettings && (
-                <UserAvatar onClick={onOpenSettings} />
-              )}
-            </div>
+            {/* User Avatar */}
+            {onOpenSettings && (
+              <UserAvatar onClick={onOpenSettings} />
+            )}
           </div>
         </header>
       )}
@@ -171,6 +144,21 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
 
           {/* View Controls */}
           <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative w-64 hidden md:block">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search projects..."
+                className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
             {/* View Toggle */}
             <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
               <button
@@ -243,6 +231,15 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
                 </>
               )}
             </div>
+
+            {/* New Project Button */}
+            <button
+              onClick={() => setIsNewProjectModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+            >
+              <Plus size={18} />
+              <span>Create new</span>
+            </button>
           </div>
         </div>
       </div>

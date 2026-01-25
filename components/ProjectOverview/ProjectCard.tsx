@@ -168,7 +168,7 @@ export function ProjectCard({ project, viewMode, onClick, onMenuClick }: Project
     <div
       onClick={onClick}
       onContextMenu={handleContextMenu}
-      className="group relative flex flex-col p-4 rounded-xl border border-border bg-card/50 hover:bg-card hover:border-primary/30 transition-all cursor-pointer min-h-[160px]"
+      className="group relative flex flex-col p-4 rounded-xl border border-border bg-card/50 hover:bg-card hover:border-primary/30 transition-all cursor-pointer"
     >
       {/* Menu Button */}
       <button
@@ -178,35 +178,32 @@ export function ProjectCard({ project, viewMode, onClick, onMenuClick }: Project
         <MoreVertical size={16} />
       </button>
 
-      {/* Label Badge */}
-      {project.label && (
-        <div className="absolute top-3 left-3">
-          <span
-            className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full"
-            style={{
-              backgroundColor: `${project.color || '#3b82f6'}20`,
-              color: project.color || '#3b82f6',
-            }}
-          >
-            {project.label}
-          </span>
-        </div>
-      )}
-
-      {/* Icon */}
-      <div className={cn("mb-4", project.label && "mt-4")}>
+      {/* Top section: Icon + Title/Label */}
+      <div className="flex items-start gap-3">
+        {/* Icon */}
         <ProjectIcon icon={project.icon} />
-      </div>
 
-      {/* Content */}
-      <div className="flex-1">
-        <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-tight">
-          {project.name}
-        </h3>
+        {/* Title and Label */}
+        <div className="flex-1 min-w-0 pt-0.5">
+          <h3 className="font-semibold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-tight">
+            {project.name}
+          </h3>
+          {project.label && (
+            <span
+              className="inline-block mt-1.5 px-2 py-0.5 text-[10px] font-medium rounded-full"
+              style={{
+                backgroundColor: `${project.color || '#3b82f6'}20`,
+                color: project.color || '#3b82f6',
+              }}
+            >
+              {project.label}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50">
+      <div className="flex items-center justify-between mt-4">
         <div className="text-xs text-muted-foreground">
           {formatDate(project.updatedAt)} · {project.sourceCount} sources
         </div>

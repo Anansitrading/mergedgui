@@ -1,40 +1,38 @@
-// SkillsLibrary Component - Main Skills Library UI
+// SkillsLibrary Component - Main Skills Library UI with Sub-Tab Navigation
 // Task 2_2: Skills Library UI
 // Task 2_4: Skill Detail & Edit Integration
 // Task 2_5: Skill Execution Integration
+// Skills Library Redesign: Added sub-tab navigation (My Skills / All Skills / Community)
 
 import { useState, useCallback } from 'react';
 import { useSkills } from '../../hooks/useSkills';
-import { SkillsHeader } from './SkillsHeader';
-import { SkillsGrid } from './SkillsGrid';
-import { EmptyState } from './EmptyState';
+import { useSkillsSubNavigation } from '../../hooks/useSkillsSubNavigation';
+import { MySkillsView } from './MySkillsView';
+import { AllSkillsView } from './AllSkillsView';
+import { CommunitySkillsView } from './CommunitySkillsView';
 import { ExecuteSkillModal } from './ExecuteSkillModal';
 import { SkillDetailModal } from './SkillDetailModal';
 import type { Skill } from '../../types/skills';
+
+type SortOption = 'most-used' | 'recent' | 'alphabetical';
 
 interface SkillsLibraryProps {
   onCreateSkill?: () => void;
   onEditSkill?: (skill: Skill) => void;
   onRunSkill?: (skill: Skill) => void;
+  search?: string;
+  sortBy?: SortOption;
 }
 
 export function SkillsLibrary({
   onCreateSkill,
   onEditSkill,
   onRunSkill,
+  search = '',
+  sortBy = 'most-used',
 }: SkillsLibraryProps) {
-  const {
-    skills,
-    filteredSkills,
-    loading,
-    error,
-    search,
-    setSearch,
-    category,
-    setCategory,
-    refetch,
-    deleteSkill,
-  } = useSkills();
+  const { deleteSkill, refetch } = useSkills();
+  const { activeSubTab, setActiveSubTab } = useSkillsSubNavigation();
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [executeModalSkill, setExecuteModalSkill] = useState<Skill | null>(null);
@@ -44,7 +42,6 @@ export function SkillsLibrary({
     if (onCreateSkill) {
       onCreateSkill();
     } else {
-      // TODO: Open create skill modal
       console.log('Create skill clicked');
     }
   }, [onCreateSkill]);
@@ -57,7 +54,6 @@ export function SkillsLibrary({
     if (onEditSkill) {
       onEditSkill(skill);
     } else {
-      // Open detail modal for editing
       setDetailModalSkill(skill);
     }
   }, [onEditSkill]);
@@ -66,7 +62,6 @@ export function SkillsLibrary({
     if (onRunSkill) {
       onRunSkill(skill);
     } else {
-      // Open the execute skill modal
       setExecuteModalSkill(skill);
     }
   }, [onRunSkill]);
@@ -76,7 +71,6 @@ export function SkillsLibrary({
   }, []);
 
   const handleExecutionComplete = useCallback(() => {
-    // Refetch skills to update execution counts
     refetch();
   }, [refetch]);
 
@@ -85,9 +79,7 @@ export function SkillsLibrary({
   }, []);
 
   const handleSkillUpdated = useCallback((updatedSkill: Skill) => {
-    // Update the local skill in the detail modal
     setDetailModalSkill(updatedSkill);
-    // Refetch to update the grid
     refetch();
   }, [refetch]);
 
@@ -115,50 +107,59 @@ export function SkillsLibrary({
     }
   }, [deleteSkill, isDeleting]);
 
-  const handleClearFilters = useCallback(() => {
-    setSearch('');
-    setCategory('all');
-  }, [setSearch, setCategory]);
+  const handleActivateSkill = useCallback((skill: Skill) => {
+    // TODO: Implement skill activation for marketplace
+    console.log('Activate skill:', skill.id);
+  }, []);
 
-  // Determine which empty state to show
-  const hasNoSkills = !loading && !error && skills.length === 0;
-  const hasNoResults = !loading && !error && skills.length > 0 && filteredSkills.length === 0;
-
-  return (
-    <>
-      <div className="space-y-6">
-        {/* Header with search and filters */}
-        <SkillsHeader
-          search={search}
-          onSearchChange={setSearch}
-          category={category}
-          onCategoryChange={setCategory}
-          onCreateClick={handleCreateClick}
-          skillCount={filteredSkills.length}
-        />
-
-        {/* Content */}
-        {hasNoSkills ? (
-          <EmptyState type="no-skills" onCreateClick={handleCreateClick} />
-        ) : hasNoResults ? (
-          <EmptyState
-            type="no-results"
-            searchQuery={search}
-            onCreateClick={handleCreateClick}
-            onClearFilters={handleClearFilters}
-          />
-        ) : (
-          <SkillsGrid
-            skills={filteredSkills}
-            loading={loading}
-            error={error}
-            onRetry={refetch}
+  // Render the active view based on selected sub-tab
+  const renderActiveView = () => {
+    switch (activeSubTab) {
+      case 'my-skills':
+        return (
+          <MySkillsView
+            onCreateSkill={handleCreateClick}
             onRunSkill={handleRunSkill}
             onEditSkill={handleEditSkill}
             onDeleteSkill={handleDeleteSkill}
             onViewSkill={handleViewSkill}
+            search={search}
+            sortBy={sortBy}
           />
-        )}
+        );
+      case 'all-skills':
+        return (
+          <AllSkillsView
+            onCreateSkill={handleCreateClick}
+            onRunSkill={handleRunSkill}
+            onEditSkill={handleEditSkill}
+            onDeleteSkill={handleDeleteSkill}
+            onViewSkill={handleViewSkill}
+            onActivateSkill={handleActivateSkill}
+            search={search}
+            sortBy={sortBy}
+          />
+        );
+      case 'community-skills':
+        return (
+          <CommunitySkillsView
+            onCreateSkill={handleCreateClick}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <>
+      {/* Tab Content - Sub-tabs are now in SkillsTab controls bar */}
+      <div
+        role="tabpanel"
+        id={`tabpanel-${activeSubTab}`}
+        aria-labelledby={`tab-${activeSubTab}`}
+      >
+        {renderActiveView()}
       </div>
 
       {/* Execute Skill Modal */}

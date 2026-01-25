@@ -2,19 +2,50 @@
 // Task 2_2: Skills Library UI
 // Task 2_3: Create Skill Form
 // Task 3_5: Analytics & Polish - Added onboarding
+// Skills Library Redesign: Added CustomSkillWizard
+// Layout Redesign: Unified controls bar with border like Projects/Integrations
 
 import { useState, useCallback } from 'react';
-import { SkillsLibrary, CreateSkillModal, OnboardingModal, useSkillsOnboarding } from '../Skills';
+import { Plus, Search, LayoutGrid, List, ChevronDown } from 'lucide-react';
+import { cn } from '../../utils/cn';
+import { SkillsLibrary, CustomSkillWizard, OnboardingModal, useSkillsOnboarding } from '../Skills';
 import { useSkills } from '../../hooks/useSkills';
+import { useSkillsSubNavigation, type SkillsSubTabType } from '../../hooks/useSkillsSubNavigation';
 import type { Skill } from '../../types/skills';
 
+// Sub-tab configuration
+const SUB_TABS: { id: SkillsSubTabType; label: string }[] = [
+  { id: 'all-skills', label: 'All' },
+  { id: 'my-skills', label: 'My Skills' },
+  { id: 'community-skills', label: 'Community' },
+];
+
+// Sort options
+const SORT_OPTIONS = [
+  { id: 'most-used', label: 'Most used' },
+  { id: 'recent', label: 'Recent' },
+  { id: 'alphabetical', label: 'A-Z' },
+] as const;
+
+type SortOption = typeof SORT_OPTIONS[number]['id'];
+
 export function SkillsTab() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { refetch } = useSkills();
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const { skills, refetch } = useSkills();
+  const { activeSubTab, setActiveSubTab } = useSkillsSubNavigation();
   const { showOnboarding, dismissOnboarding } = useSkillsOnboarding();
 
+  // Filter and sort state
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('most-used');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+
+  // Current sort label
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.id === sortBy)?.label || 'Sort';
+
   const handleCreateSkill = useCallback(() => {
-    setIsCreateModalOpen(true);
+    setIsWizardOpen(true);
   }, []);
 
   const handleSkillCreated = useCallback((skill: Skill) => {
@@ -39,12 +70,12 @@ export function SkillsTab() {
 
   const handleStartWithTemplate = useCallback(() => {
     dismissOnboarding();
-    setIsCreateModalOpen(true);
+    setIsWizardOpen(true);
   }, [dismissOnboarding]);
 
   const handleStartFromScratch = useCallback(() => {
     dismissOnboarding();
-    setIsCreateModalOpen(true);
+    setIsWizardOpen(true);
   }, [dismissOnboarding]);
 
   return (
@@ -52,19 +83,148 @@ export function SkillsTab() {
       role="tabpanel"
       id="tabpanel-skills"
       aria-labelledby="tab-skills"
-      className="h-full overflow-y-auto p-6"
+      className="flex flex-col h-full"
     >
-      <div className="max-w-6xl mx-auto">
-        <SkillsLibrary
-          onCreateSkill={handleCreateSkill}
-          onEditSkill={handleEditSkill}
-          onRunSkill={handleRunSkill}
-        />
+      {/* Controls Bar - with border like Projects/Integrations */}
+      <div className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-6 py-4">
+          {/* Sub-Tab Navigation - Pill style */}
+          <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
+            {SUB_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={cn(
+                  'px-4 py-1.5 text-sm font-medium rounded-md transition-all',
+                  activeSubTab === tab.id
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* View Controls */}
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative w-64 hidden md:block">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search skills..."
+                className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  'p-1.5 rounded-md transition-all',
+                  viewMode === 'grid'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Grid view"
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'p-1.5 rounded-md transition-all',
+                  viewMode === 'list'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="List view"
+              >
+                <List size={18} />
+              </button>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span>{currentSortLabel}</span>
+                <ChevronDown
+                  size={16}
+                  className={cn(
+                    'transition-transform',
+                    isSortDropdownOpen && 'rotate-180'
+                  )}
+                />
+              </button>
+
+              {isSortDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsSortDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-xl z-50 py-1">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setSortBy(option.id);
+                          setIsSortDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full px-4 py-2 text-sm text-left transition-colors',
+                          sortBy === option.id
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={handleCreateSkill}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+            >
+              <Plus size={18} />
+              <span>Create new skill</span>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <CreateSkillModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto p-6">
+        <div className="max-w-6xl mx-auto">
+          <SkillsLibrary
+            onCreateSkill={handleCreateSkill}
+            onEditSkill={handleEditSkill}
+            onRunSkill={handleRunSkill}
+            search={search}
+            sortBy={sortBy}
+          />
+        </div>
+      </main>
+
+      {/* Custom Skill Wizard - 5-step skill creation */}
+      <CustomSkillWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
         onCreated={handleSkillCreated}
       />
 

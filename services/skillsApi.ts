@@ -440,6 +440,58 @@ The skill has been executed successfully with the provided input.
  * POST /api/skills/:id/test - Test a skill without saving execution
  */
 export async function testSkill(
+  config: {
+    promptTemplate: string;
+    systemPrompt?: string;
+    model?: string;
+    parameters?: { temperature?: number; max_tokens?: number };
+    input?: Record<string, unknown>;
+  }
+): Promise<ExecuteSkillResponse> {
+  await delay(1000);
+
+  // Simulate test execution
+  const testOutput = `## Test Execution
+
+**Model:** ${config.model || 'claude-3-5-sonnet-20241022'}
+
+### System Prompt Preview
+\`\`\`
+${config.systemPrompt?.substring(0, 200) || 'No system prompt'}...
+\`\`\`
+
+### User Prompt Preview
+\`\`\`
+${config.promptTemplate.substring(0, 200)}...
+\`\`\`
+
+### Input Variables
+\`\`\`json
+${JSON.stringify(config.input || {}, null, 2)}
+\`\`\`
+
+### Parameters
+- Temperature: ${config.parameters?.temperature ?? 0.7}
+- Max Tokens: ${config.parameters?.max_tokens ?? 4096}
+
+### Status
+✅ Test completed successfully. The skill configuration is valid and ready to save.
+
+*This is a simulated test. Actual execution will use the configured AI model.*`;
+
+  return {
+    executionId: `test-${generateId()}`,
+    status: 'completed',
+    output: testOutput,
+    tokensUsed: 150,
+    durationMs: 500,
+  };
+}
+
+/**
+ * POST /api/skills/:id/test - Test an existing skill by ID
+ */
+export async function testSkillById(
   skillId: string,
   input?: Record<string, unknown>
 ): Promise<ExecuteSkillResponse> {
@@ -450,33 +502,12 @@ export async function testSkill(
     throw createApiError('SKILL_NOT_FOUND', `Skill with ID ${skillId} not found`);
   }
 
-  // Simulate test execution (doesn't count towards stats)
-  const testOutput = `## Test Execution
-
-**Skill:** ${skill.name}
-**Model:** ${skill.model}
-**Output Format:** ${skill.outputFormat}
-
-### Prompt Preview
-\`\`\`
-${skill.promptTemplate.substring(0, 200)}...
-\`\`\`
-
-### Input Variables
-\`\`\`json
-${JSON.stringify(input || {}, null, 2)}
-\`\`\`
-
-### Status
-✅ Test completed successfully. The skill is properly configured.`;
-
-  return {
-    executionId: `test-${generateId()}`,
-    status: 'completed',
-    output: testOutput,
-    tokensUsed: 150,
-    durationMs: 500,
-  };
+  return testSkill({
+    promptTemplate: skill.promptTemplate,
+    model: skill.model,
+    parameters: skill.parameters,
+    input,
+  });
 }
 
 // =============================================================================

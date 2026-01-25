@@ -4,10 +4,9 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, ChevronDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import {
-  FilterBar,
   IntegrationCard,
   CreateCustomCard,
   CustomConnectorModal,
@@ -31,9 +30,16 @@ import { INTEGRATION_APPS } from '../../types/settings';
 
 // Sub-tab configuration
 const SUB_TABS: { id: IntegrationsSubTab; label: string }[] = [
-  { id: 'all', label: 'All Integrations' },
+  { id: 'all', label: 'All' },
   { id: 'my-integrations', label: 'My Integrations' },
   { id: 'custom-connectors', label: 'Custom Connectors' },
+];
+
+// Sort options
+const SORT_OPTIONS: { id: IntegrationsFilterState['sortBy']; label: string }[] = [
+  { id: 'recent', label: 'Most recent' },
+  { id: 'popular', label: 'Popular' },
+  { id: 'name', label: 'Name' },
 ];
 
 // Default filter state
@@ -62,6 +68,13 @@ export function IntegrationsTab() {
 
   // Filter state
   const [filters, setFilters] = useState<IntegrationsFilterState>(DEFAULT_FILTERS);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+
+  // Current sort label
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.id === filters.sortBy)?.label || 'Sort';
 
   // Connected apps state (mock data - replace with actual API calls)
   const [connectedApps, setConnectedApps] = useState<ConnectedIntegration[]>([
@@ -379,68 +392,158 @@ export function IntegrationsTab() {
       role="tabpanel"
       id="tabpanel-integrations"
       aria-labelledby="tab-integrations"
-      className="h-full overflow-y-auto"
+      className="flex flex-col h-full"
     >
-      <div className="max-w-6xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Integrations</h1>
-            <p className="text-muted-foreground mt-1">
-              Connect third-party apps and custom MCP servers to extend functionality.
-            </p>
-          </div>
-
-          {/* Primary Action Button */}
-          <button
-            onClick={() => {
-              setEditingConnector(undefined);
-              setIsCustomConnectorModalOpen(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all whitespace-nowrap"
-          >
-            <Plus size={18} />
-            <span>Add Custom Connector</span>
-          </button>
-        </header>
-
-        {/* Sub-Tab Navigation */}
-        <div className="border-b border-border">
-          <div className="flex items-center gap-1 -mb-px">
+      {/* Controls Bar - with border like Projects */}
+      <div className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-6 py-4">
+          {/* Sub-Tab Navigation - Pill style */}
+          <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
             {SUB_TABS.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'px-4 py-2.5 text-sm font-medium border-b-2 transition-all',
+                  'px-4 py-1.5 text-sm font-medium rounded-md transition-all',
                   activeTab === tab.id
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
               >
                 {tab.label}
-                {tab.id === 'custom-connectors' && customConnectors.length > 0 && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-primary/20 text-primary rounded">
-                    {customConnectors.length}
-                  </span>
-                )}
-                {tab.id === 'my-integrations' && connectedApps.length > 0 && (
-                  <span className="ml-2 px-1.5 py-0.5 text-xs bg-emerald-500/20 text-emerald-500 rounded">
-                    {connectedApps.length}
-                  </span>
-                )}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Filter Bar */}
-        <FilterBar
-          filters={filters}
-          onFiltersChange={setFilters}
-          showStatusFilter={activeTab === 'my-integrations'}
-          showConnectedToggle={activeTab === 'all'}
-        />
+          {/* View Controls */}
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative w-64 hidden md:block">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                placeholder="Search integrations..."
+                className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
+            {/* View Toggle */}
+            <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  'p-1.5 rounded-md transition-all',
+                  viewMode === 'grid'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="Grid view"
+              >
+                <LayoutGrid size={18} />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'p-1.5 rounded-md transition-all',
+                  viewMode === 'list'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                title="List view"
+              >
+                <List size={18} />
+              </button>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                className="flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span>{currentSortLabel}</span>
+                <ChevronDown
+                  size={16}
+                  className={cn(
+                    'transition-transform',
+                    isSortDropdownOpen && 'rotate-180'
+                  )}
+                />
+              </button>
+
+              {isSortDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsSortDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-xl z-50 py-1">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setFilters({ ...filters, sortBy: option.id });
+                          setIsSortDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full px-4 py-2 text-sm text-left transition-colors',
+                          filters.sortBy === option.id
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Action Button */}
+            <button
+              onClick={() => {
+                setEditingConnector(undefined);
+                setIsCustomConnectorModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+            >
+              <Plus size={18} />
+              <span>Add Custom Connector</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto p-6">
+        {/* Show Connected Only Toggle (for All tab) */}
+        {activeTab === 'all' && (
+          <div className="flex items-center mb-4">
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <div
+                className={cn(
+                  'relative inline-flex w-9 h-5 rounded-full cursor-pointer transition-colors duration-200',
+                  filters.showConnectedOnly ? 'bg-primary' : 'bg-muted'
+                )}
+                onClick={() => setFilters({ ...filters, showConnectedOnly: !filters.showConnectedOnly })}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200',
+                    filters.showConnectedOnly && 'translate-x-4'
+                  )}
+                />
+              </div>
+              <span className="text-muted-foreground">Show connected only</span>
+            </label>
+          </div>
+        )}
 
         {/* Content based on active tab */}
         {showEmptyState ? (
@@ -525,7 +628,7 @@ export function IntegrationsTab() {
             </div>
           </>
         )}
-      </div>
+      </main>
 
       {/* Custom Connector Modal */}
       <CustomConnectorModal

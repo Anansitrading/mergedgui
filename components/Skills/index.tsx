@@ -4,12 +4,27 @@
 // Task 2_4: Skill Detail & Edit
 // Task 2_5: Skill Execution
 // Task 3_5: Analytics & Polish
+// Skills Library Redesign: Sub-tabs and Custom Skill Wizard
 
 export { SkillsLibrary } from './SkillsLibrary';
 export { SkillsHeader } from './SkillsHeader';
 export { SkillsGrid } from './SkillsGrid';
 export { SkillCard } from './SkillCard';
 export { EmptyState } from './EmptyState';
+
+// Skills Library Redesign: Sub-Tab Navigation
+export { SkillsSubTabs } from './SkillsSubTabs';
+export { MySkillsView } from './MySkillsView';
+export { AllSkillsView } from './AllSkillsView';
+export { CommunitySkillsView } from './CommunitySkillsView';
+
+// Skills Library Redesign: Supporting Components
+export { SkillsSortDropdown } from './SkillsSortDropdown';
+export { SkillsAnalyticsSummary } from './SkillsAnalyticsSummary';
+export { CreateCustomSkillCard } from './CreateCustomSkillCard';
+
+// Skills Library Redesign: Custom Skill Wizard
+export { CustomSkillWizard } from './CustomSkillWizard';
 
 // Task 2_3: Create Skill Form Components
 export { CreateSkillModal } from './CreateSkillModal';

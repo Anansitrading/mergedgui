@@ -48,7 +48,7 @@ export function FilterBar({
   };
 
   return (
-    <div className="flex flex-col gap-4 mb-6">
+    <div className="flex flex-col gap-4">
       {/* Top row: Search and Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search Input */}
