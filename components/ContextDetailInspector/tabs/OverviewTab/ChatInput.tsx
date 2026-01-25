@@ -2,10 +2,8 @@ import { useState, useCallback, useRef, useEffect, KeyboardEvent } from 'react';
 import {
   Send,
   Loader2,
-  AlertTriangle,
   AtSign,
   Crosshair,
-  Bot,
   ChevronDown,
   Mic,
   StopCircle,
@@ -14,6 +12,7 @@ import {
   Minimize2,
   X,
   Check,
+  Circle,
 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { AI_MODELS } from '../../../../types/settings';
@@ -29,6 +28,8 @@ interface ChatInputProps {
   isLoading: boolean;
   disabled?: boolean;
   tokenUsage?: TokenUsage;
+  isExpanded?: boolean;
+  onExpandChange?: (expanded: boolean) => void;
 }
 
 // Format number with commas
@@ -36,23 +37,35 @@ function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-export function ChatInput({ onSend, isLoading, disabled = false, tokenUsage }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  isLoading,
+  disabled = false,
+  tokenUsage,
+  isExpanded: externalExpanded,
+  onExpandChange,
+}: ChatInputProps) {
   const [value, setValue] = useState('');
 
-  // New state for toolbar features
+  // State for toolbar features
   const [isFollowAgentEnabled, setIsFollowAgentEnabled] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AIModel>('claude');
   const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
   const [isContextSelectorOpen, setIsContextSelectorOpen] = useState(false);
+
+  // Use external expanded state if provided, otherwise use internal
+  const isExpanded = externalExpanded !== undefined ? externalExpanded : internalExpanded;
+  const setIsExpanded = onExpandChange || setInternalExpanded;
 
   // Refs
   const modelSelectorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const contextSelectorRef = useRef<HTMLDivElement>(null);
 
   // Get current model info
   const currentModel = AI_MODELS.find((m) => m.id === selectedModel) || AI_MODELS[0];
@@ -66,11 +79,14 @@ export function ChatInput({ onSend, isLoading, disabled = false, tokenUsage }: C
       }
     : null;
 
-  // Close model selector when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (modelSelectorRef.current && !modelSelectorRef.current.contains(event.target as Node)) {
         setIsModelSelectorOpen(false);
+      }
+      if (contextSelectorRef.current && !contextSelectorRef.current.contains(event.target as Node)) {
+        setIsContextSelectorOpen(false);
       }
     };
 
@@ -78,16 +94,36 @@ export function ChatInput({ onSend, isLoading, disabled = false, tokenUsage }: C
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handle @ key in textarea
-  const handleTextareaChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newValue = e.target.value;
-    setValue(newValue);
+  // Handle Escape key when expanded
+  useEffect(() => {
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape' && isExpanded) {
+        setIsExpanded(false);
+      }
+    };
 
-    // Check if @ was just typed
-    if (newValue.endsWith('@') && !isContextSelectorOpen) {
-      setIsContextSelectorOpen(true);
+    if (isExpanded) {
+      document.addEventListener('keydown', handleKeyDown);
     }
-  }, [isContextSelectorOpen]);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isExpanded, setIsExpanded]);
+
+  // Handle @ key in textarea
+  const handleTextareaChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value;
+      setValue(newValue);
+
+      // Check if @ was just typed
+      if (newValue.endsWith('@') && !isContextSelectorOpen) {
+        setIsContextSelectorOpen(true);
+      }
+    },
+    [isContextSelectorOpen]
+  );
 
   const handleSubmit = useCallback(() => {
     if (value.trim() && !isLoading && !disabled) {
@@ -103,7 +139,6 @@ export function ChatInput({ onSend, isLoading, disabled = false, tokenUsage }: C
         e.preventDefault();
         handleSubmit();
       }
-      // Close context selector on Escape
       if (e.key === 'Escape') {
         setIsContextSelectorOpen(false);
         setIsModelSelectorOpen(false);
@@ -178,7 +213,6 @@ export function ChatInput({ onSend, isLoading, disabled = false, tokenUsage }: C
   const handleModelSelect = useCallback((modelId: AIModel) => {
     setSelectedModel(modelId);
     setIsModelSelectorOpen(false);
-    // Persist to localStorage
     localStorage.setItem('kijko_selected_model', modelId);
   }, []);
 
@@ -192,290 +226,278 @@ export function ChatInput({ onSend, isLoading, disabled = false, tokenUsage }: C
 
   const isDisabled = isLoading || disabled || !value.trim();
 
-  // Button base styles
+  // Toolbar button styles
   const toolbarButtonClass = cn(
-    'p-2 rounded-lg transition-colors duration-150',
+    'p-1.5 rounded-md transition-colors duration-150',
     'text-gray-500 hover:text-gray-300 hover:bg-white/5',
     'disabled:opacity-50 disabled:cursor-not-allowed'
   );
 
   const activeToolbarButtonClass = cn(
-    'p-2 rounded-lg transition-colors duration-150',
+    'p-1.5 rounded-md transition-colors duration-150',
     'bg-blue-500/20 text-blue-400'
   );
 
   return (
-    <div className="bg-gray-900/50 border-t border-white/10">
-      {/* Token Usage Display */}
-      {tokenUsage && (
-        <div className="flex items-center gap-3 px-3 py-2 border-b border-white/5">
-          {/* Warning icon when near limit */}
-          {tokenWarning?.isWarning && (
-            <AlertTriangle
-              className={cn(
-                'w-4 h-4 flex-shrink-0',
-                tokenWarning.isNearLimit ? 'text-red-500' : 'text-amber-500'
-              )}
-            />
-          )}
-
-          {/* Token count text */}
-          <div className="flex items-center gap-1.5 text-sm">
-            <span
-              className={cn(
-                'font-medium',
-                tokenWarning?.isNearLimit
-                  ? 'text-red-400'
-                  : tokenWarning?.isWarning
-                  ? 'text-amber-400'
-                  : 'text-gray-300'
-              )}
-            >
-              {formatNumber(tokenUsage.currentTokens)}
-            </span>
-            <span className="text-gray-500">/</span>
-            <span className="text-gray-500">{formatNumber(tokenUsage.maxTokens)}</span>
-            <span className="text-gray-500 text-xs ml-0.5">tokens</span>
-          </div>
-
-          {/* Progress bar */}
-          <div className="flex-1 min-w-[60px] max-w-[120px] h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <div
-              className={cn(
-                'h-full rounded-full transition-all duration-300',
-                tokenWarning?.isNearLimit
-                  ? 'bg-red-500'
-                  : tokenWarning?.isWarning
-                  ? 'bg-amber-500'
-                  : 'bg-blue-500'
-              )}
-              style={{ width: `${Math.min(tokenWarning?.percentage ?? 0, 100)}%` }}
-            />
-          </div>
-        </div>
+    <>
+      {/* Backdrop when expanded */}
+      {isExpanded && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+          onClick={() => setIsExpanded(false)}
+        />
       )}
 
-      {/* Attachments Preview */}
-      {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-3 py-2 border-b border-white/5">
-          {attachments.map((file, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-lg text-sm"
-            >
-              <Paperclip className="w-3 h-3 text-gray-400" />
-              <span className="text-gray-300 max-w-[150px] truncate">{file.name}</span>
-              <button
-                onClick={() => removeAttachment(index)}
-                className="p-0.5 text-gray-500 hover:text-gray-300"
+      <div
+        className={cn(
+          'bg-gray-900/50 border-t border-white/10 transition-all duration-300',
+          isExpanded && 'fixed inset-4 z-50 bg-[#0f1419] border border-white/10 rounded-xl shadow-2xl flex flex-col'
+        )}
+      >
+        {/* Attachments Preview */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 px-4 py-2 border-b border-white/5">
+            {attachments.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-2 px-2 py-1 bg-white/5 rounded-lg text-sm"
               >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+                <Paperclip className="w-3 h-3 text-gray-400" />
+                <span className="text-gray-300 max-w-[150px] truncate">{file.name}</span>
+                <button
+                  onClick={() => removeAttachment(index)}
+                  className="p-0.5 text-gray-500 hover:text-gray-300"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-      {/* Input Area with Toolbars */}
-      <div className="flex items-end gap-2 p-3">
-        {/* Left Toolbar */}
-        <div className="flex items-center gap-1 pb-1">
-          {/* @ Context Button */}
-          <button
-            onClick={() => setIsContextSelectorOpen(!isContextSelectorOpen)}
-            className={isContextSelectorOpen ? activeToolbarButtonClass : toolbarButtonClass}
-            title="Add context (or type @)"
-            aria-label="Add context"
+        {/* Main Input Card */}
+        <div className={cn('p-4', isExpanded && 'flex-1 flex flex-col')}>
+          <div
+            className={cn(
+              'relative bg-gray-800/50 border border-white/10 rounded-xl',
+              isExpanded && 'flex-1 flex flex-col'
+            )}
           >
-            <AtSign className="w-5 h-5" />
-          </button>
-
-          {/* Follow Agent Toggle */}
-          <button
-            role="switch"
-            aria-checked={isFollowAgentEnabled}
-            onClick={() => setIsFollowAgentEnabled(!isFollowAgentEnabled)}
-            className={isFollowAgentEnabled ? activeToolbarButtonClass : toolbarButtonClass}
-            title={isFollowAgentEnabled ? 'Following agent location' : 'Follow agent location'}
-            aria-label="Follow agent"
-          >
-            <Crosshair className="w-5 h-5" />
-          </button>
-
-          {/* Model Selector */}
-          <div className="relative" ref={modelSelectorRef}>
+            {/* Expand button in top-right corner */}
             <button
-              onClick={() => setIsModelSelectorOpen(!isModelSelectorOpen)}
+              onClick={() => setIsExpanded(!isExpanded)}
               className={cn(
-                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors duration-150',
-                isModelSelectorOpen
-                  ? 'bg-blue-500/20 text-blue-400'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                'absolute top-2 right-2 p-1 rounded-md z-10',
+                'text-gray-500 hover:text-gray-300 hover:bg-white/5',
+                'transition-colors duration-150'
               )}
-              title="Select model"
-              aria-label="Select AI model"
+              title={isExpanded ? 'Minimize' : 'Expand'}
+              aria-label={isExpanded ? 'Minimize input' : 'Expand input'}
             >
-              <Bot className="w-4 h-4" />
-              <span className="text-xs font-medium hidden sm:inline">{currentModel.name}</span>
-              <ChevronDown
-                className={cn(
-                  'w-3 h-3 transition-transform duration-200',
-                  isModelSelectorOpen && 'rotate-180'
-                )}
-              />
+              {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
             </button>
 
-            {/* Model Dropdown - Opens upward */}
-            {isModelSelectorOpen && (
-              <div className="absolute bottom-full left-0 mb-2 w-64 bg-[#1a1f26] border border-white/10 rounded-lg shadow-lg z-50 overflow-hidden">
-                {AI_MODELS.map((model) => (
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Message Kijko — @ to include context, / for commands"
+              disabled={isLoading || disabled}
+              rows={isExpanded ? 10 : 2}
+              className={cn(
+                'w-full px-4 pt-3 pb-12 bg-transparent rounded-xl',
+                'text-white placeholder-gray-500 text-sm',
+                'resize-none',
+                isExpanded ? 'flex-1 min-h-0' : 'min-h-[80px]',
+                'focus:outline-none',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'transition-all duration-200'
+              )}
+            />
+
+            {/* Context Selector Popover */}
+            {isContextSelectorOpen && (
+              <div
+                ref={contextSelectorRef}
+                className="absolute bottom-full left-4 mb-2 w-64 bg-[#1a1f26] border border-white/10 rounded-lg shadow-lg z-50 p-3"
+              >
+                <p className="text-xs text-gray-500 mb-2">Add context to your message</p>
+                <div className="space-y-1">
+                  <button className="w-full text-left px-2 py-1.5 text-sm text-gray-300 hover:bg-white/5 rounded">
+                    📄 Current file
+                  </button>
+                  <button className="w-full text-left px-2 py-1.5 text-sm text-gray-300 hover:bg-white/5 rounded">
+                    📁 Project files
+                  </button>
+                  <button className="w-full text-left px-2 py-1.5 text-sm text-gray-300 hover:bg-white/5 rounded">
+                    🔍 Search symbols
+                  </button>
+                </div>
+                <p className="text-xs text-gray-600 mt-2">or type @ to include context</p>
+              </div>
+            )}
+
+            {/* Bottom Toolbar - inside the card */}
+            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 border-t border-white/5">
+              {/* Left side - Icons */}
+              <div className="flex items-center gap-1">
+                {/* @ Context Button */}
+                <button
+                  onClick={() => setIsContextSelectorOpen(!isContextSelectorOpen)}
+                  className={isContextSelectorOpen ? activeToolbarButtonClass : toolbarButtonClass}
+                  title="Add context (or type @)"
+                  aria-label="Add context"
+                >
+                  <AtSign className="w-4 h-4" />
+                </button>
+
+                {/* Follow Agent Toggle */}
+                <button
+                  role="switch"
+                  aria-checked={isFollowAgentEnabled}
+                  onClick={() => setIsFollowAgentEnabled(!isFollowAgentEnabled)}
+                  className={isFollowAgentEnabled ? activeToolbarButtonClass : toolbarButtonClass}
+                  title={isFollowAgentEnabled ? 'Following agent' : 'Follow agent'}
+                  aria-label="Follow agent"
+                >
+                  <Crosshair className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Middle - Model Selectors & Usage */}
+              <div className="flex items-center gap-3">
+                {/* Model Selector */}
+                <div className="relative" ref={modelSelectorRef}>
                   <button
-                    key={model.id}
-                    onClick={() => handleModelSelect(model.id)}
+                    onClick={() => setIsModelSelectorOpen(!isModelSelectorOpen)}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors duration-150',
-                      selectedModel === model.id
-                        ? 'bg-blue-500/10 text-blue-400'
-                        : 'text-gray-300 hover:bg-white/5'
+                      'flex items-center gap-1 px-2 py-1 rounded-md text-xs',
+                      'text-gray-400 hover:text-gray-300 hover:bg-white/5',
+                      'transition-colors duration-150'
                     )}
                   >
-                    <Bot className="w-4 h-4 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{model.name}</span>
-                        <span className="text-xs text-gray-500">{model.provider}</span>
-                      </div>
-                      <p className="text-xs text-gray-500 truncate">{model.description}</p>
-                    </div>
-                    {selectedModel === model.id && <Check className="w-4 h-4 text-blue-400" />}
+                    <span>{currentModel.name}</span>
+                    <ChevronDown
+                      className={cn(
+                        'w-3 h-3 transition-transform duration-200',
+                        isModelSelectorOpen && 'rotate-180'
+                      )}
+                    />
                   </button>
-                ))}
+
+                  {/* Model Dropdown */}
+                  {isModelSelectorOpen && (
+                    <div className="absolute bottom-full left-0 mb-2 w-56 bg-[#1a1f26] border border-white/10 rounded-lg shadow-lg z-50 overflow-hidden">
+                      {AI_MODELS.map((model) => (
+                        <button
+                          key={model.id}
+                          onClick={() => handleModelSelect(model.id)}
+                          className={cn(
+                            'w-full flex items-center gap-2 px-3 py-2 text-left text-sm',
+                            'transition-colors duration-150',
+                            selectedModel === model.id
+                              ? 'bg-blue-500/10 text-blue-400'
+                              : 'text-gray-300 hover:bg-white/5'
+                          )}
+                        >
+                          <div className="flex-1">
+                            <span className="font-medium">{model.name}</span>
+                            <span className="text-xs text-gray-500 ml-2">{model.provider}</span>
+                          </div>
+                          {selectedModel === model.id && <Check className="w-4 h-4" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Context Usage Meter */}
+                {tokenUsage && (
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs',
+                      'cursor-pointer hover:bg-white/5 transition-colors',
+                      tokenWarning?.isNearLimit
+                        ? 'text-red-400'
+                        : tokenWarning?.isWarning
+                        ? 'text-amber-400'
+                        : 'text-gray-400'
+                    )}
+                    title={`${formatNumber(tokenUsage.currentTokens)} / ${formatNumber(tokenUsage.maxTokens)} tokens used`}
+                  >
+                    <Circle
+                      className={cn(
+                        'w-3.5 h-3.5',
+                        tokenWarning?.isNearLimit
+                          ? 'fill-red-400'
+                          : tokenWarning?.isWarning
+                          ? 'fill-amber-400'
+                          : 'fill-gray-400'
+                      )}
+                    />
+                    <span>{Math.round(tokenWarning?.percentage ?? 0)}% used</span>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Right side - Actions */}
+              <div className="flex items-center gap-1">
+                {/* Voice Input */}
+                <button
+                  onClick={toggleRecording}
+                  className={cn(
+                    toolbarButtonClass,
+                    isRecording && 'bg-red-500/20 text-red-400 animate-pulse'
+                  )}
+                  title={isRecording ? 'Stop recording' : 'Voice input'}
+                  aria-label={isRecording ? 'Stop recording' : 'Voice input'}
+                >
+                  {isRecording ? <StopCircle className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+
+                {/* Attachments */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className={toolbarButtonClass}
+                  title="Add attachments"
+                  aria-label="Add attachments"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {/* Send Button */}
+                <button
+                  onClick={handleSubmit}
+                  disabled={isDisabled}
+                  className={cn(
+                    'p-1.5 rounded-md transition-all duration-200',
+                    isDisabled
+                      ? 'text-gray-600 cursor-not-allowed'
+                      : 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/10'
+                  )}
+                  title="Send message"
+                  aria-label="Send message"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Textarea */}
-        <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={handleTextareaChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask about this context..."
-            disabled={isLoading || disabled}
-            rows={1}
-            className={cn(
-              'w-full px-4 py-2.5 bg-gray-800 border border-white/10 rounded-xl',
-              'text-white placeholder-gray-500 text-sm',
-              'resize-none',
-              isExpanded ? 'min-h-[120px] max-h-[300px]' : 'min-h-[42px] max-h-[120px]',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'transition-all duration-200'
-            )}
-            style={{
-              height: 'auto',
-              overflow: isExpanded ? 'auto' : 'hidden',
-            }}
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              const maxHeight = isExpanded ? 300 : 120;
-              target.style.height = Math.min(target.scrollHeight, maxHeight) + 'px';
-            }}
-          />
-
-          {/* Context Selector Popover - would be positioned here */}
-          {isContextSelectorOpen && (
-            <div className="absolute bottom-full left-0 mb-2 w-64 bg-[#1a1f26] border border-white/10 rounded-lg shadow-lg z-50 p-3">
-              <p className="text-xs text-gray-500 mb-2">Add context to your message</p>
-              <div className="space-y-1">
-                <button className="w-full text-left px-2 py-1.5 text-sm text-gray-300 hover:bg-white/5 rounded">
-                  📄 Current file
-                </button>
-                <button className="w-full text-left px-2 py-1.5 text-sm text-gray-300 hover:bg-white/5 rounded">
-                  📁 Project files
-                </button>
-                <button className="w-full text-left px-2 py-1.5 text-sm text-gray-300 hover:bg-white/5 rounded">
-                  🔍 Search symbols
-                </button>
-              </div>
-              <p className="text-xs text-gray-600 mt-2">or type @ to include context</p>
-            </div>
-          )}
-        </div>
-
-        {/* Right Toolbar */}
-        <div className="flex items-center gap-1 pb-1">
-          {/* Voice Input */}
-          <button
-            onClick={toggleRecording}
-            className={cn(
-              toolbarButtonClass,
-              isRecording && 'bg-red-500/20 text-red-400 animate-pulse'
-            )}
-            title={isRecording ? 'Stop recording' : 'Voice input'}
-            aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
-          >
-            {isRecording ? (
-              <StopCircle className="w-5 h-5" />
-            ) : (
-              <Mic className="w-5 h-5" />
-            )}
-          </button>
-
-          {/* Attachments */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={toolbarButtonClass}
-            title="Add attachments"
-            aria-label="Add attachments"
-          >
-            <Paperclip className="w-5 h-5" />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
-          {/* Expand Toggle */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className={isExpanded ? activeToolbarButtonClass : toolbarButtonClass}
-            title={isExpanded ? 'Compact input' : 'Expand input'}
-            aria-label={isExpanded ? 'Compact input' : 'Expand input'}
-          >
-            {isExpanded ? (
-              <Minimize2 className="w-5 h-5" />
-            ) : (
-              <Maximize2 className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-
-        {/* Send Button */}
-        <button
-          onClick={handleSubmit}
-          disabled={isDisabled}
-          className={cn(
-            'flex items-center justify-center w-10 h-10 rounded-xl',
-            'transition-all duration-200',
-            isDisabled
-              ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-500 text-white hover:bg-blue-600 active:scale-95'
-          )}
-        >
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Send className="w-5 h-5" />
-          )}
-        </button>
       </div>
-    </div>
+    </>
   );
 }
