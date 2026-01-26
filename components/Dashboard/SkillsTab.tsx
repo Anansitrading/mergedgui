@@ -181,7 +181,7 @@ export function SkillsTab() {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-6xl mx-auto flex gap-6">
+        <div className="flex gap-6">
           {/* Filter Sidebar */}
           <SkillsFilterSidebar
             filters={sidebarFilters}
