@@ -11,6 +11,7 @@ interface ProjectHeaderProps {
   activeTab?: TabType;
   onTabChange?: (tab: TabType) => void;
   className?: string;
+  rightActions?: React.ReactNode;
 }
 
 export function ProjectHeader({
@@ -19,6 +20,7 @@ export function ProjectHeader({
   activeTab = 'overview',
   onTabChange,
   className,
+  rightActions,
 }: ProjectHeaderProps) {
   return (
     <header
@@ -55,7 +57,7 @@ export function ProjectHeader({
         ))}
       </div>
 
-      {/* Right side: Share button + Status indicator */}
+      {/* Right side: Share button + Status indicator + User actions */}
       <div className="flex items-center gap-3 flex-shrink-0">
         {onShare && (
           <button
@@ -84,6 +86,8 @@ export function ProjectHeader({
             <span className="text-sm font-medium text-green-400">Live</span>
           </div>
         )}
+
+        {rightActions}
       </div>
     </header>
   );

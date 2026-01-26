@@ -29,7 +29,7 @@ export function PageOverviewTab({ contextItem }: PageOverviewTabProps) {
 
   return (
     <>
-      <div className="flex h-full p-4 overflow-hidden">
+      <div className="flex h-full overflow-hidden">
         {/* Full-width chat panel since source files are in the left sidebar */}
         <div className="flex-1 min-w-0 h-full">
           <ChatPanel

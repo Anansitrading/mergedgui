@@ -10,10 +10,7 @@ import {
   ChevronRight,
   GripVertical,
   Globe,
-  ArrowLeft,
-  Wrench,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '../../../../utils/cn';
 import { useSourceFiles, formatFileSize, SourceFile } from '../../../../contexts/SourceFilesContext';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
@@ -222,7 +219,6 @@ interface ContextMenuState {
 }
 
 export function LeftSidebar({ className, projectName = 'Project', projectId }: LeftSidebarProps) {
-  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -533,23 +529,6 @@ export function LeftSidebar({ className, projectName = 'Project', projectId }: L
         className
       )}
     >
-      {/* Back to dashboard + project info */}
-      <div className="px-3 py-3 border-b border-[#1e293b] flex items-center gap-2">
-        <button
-          onClick={() => navigate('/')}
-          className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors duration-150"
-          aria-label="Back to project dashboard"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
-          <Wrench className="w-3.5 h-3.5 text-blue-400" />
-        </div>
-        <span className="text-sm font-semibold text-white truncate">
-          {projectName}
-        </span>
-      </div>
-
       {/* Hidden file input for drop zone */}
       <input
         ref={fileInputRef}
@@ -560,10 +539,10 @@ export function LeftSidebar({ className, projectName = 'Project', projectId }: L
       />
 
       {/* Search & Selection Controls */}
-      <div className="px-3 py-2 border-b border-[#1e293b] space-y-2">
+      <div className="px-3 h-10 border-b border-[#1e293b] flex items-center shrink-0">
         {/* Search Toggle/Input */}
         {isSearchOpen ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full">
             <div className="flex-1 relative">
               <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
@@ -572,7 +551,7 @@ export function LeftSidebar({ className, projectName = 'Project', projectId }: L
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search files..."
                 autoFocus
-                className="w-full bg-slate-800 border border-slate-700 rounded-md pl-7 pr-2 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
+                className="w-full bg-slate-800 border border-slate-700 rounded-md pl-7 pr-2 py-1 text-xs text-slate-200 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
               />
             </div>
             <button
@@ -583,7 +562,7 @@ export function LeftSidebar({ className, projectName = 'Project', projectId }: L
             </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between w-full">
             <span className="text-xs text-slate-400 font-medium">Explorer</span>
             <div className="flex items-center gap-1">
               <button

@@ -123,9 +123,9 @@ export function ChatPanel({
   const hasOpenTabs = state.openTabIds.length > 0;
 
   return (
-    <div className="flex flex-col bg-white/5 border border-white/10 overflow-hidden h-full rounded-lg">
-      {/* Header - Chat Session Tabs */}
-      <div className="border-b border-white/10 flex items-center overflow-x-auto shrink-0 scrollbar-hide">
+    <div className="flex flex-col overflow-hidden h-full">
+      {/* Header - Chat Session Tabs (matches Explorer row style) */}
+      <div className="border-b border-[#1e293b] flex items-center overflow-x-auto shrink-0 h-10 scrollbar-hide">
         {hasOpenTabs ? (
           <>
             {state.openTabIds.map((tabId) => {
@@ -140,7 +140,7 @@ export function ChatPanel({
                   onClick={() => !isRenaming && focusTab(tabId)}
                   onContextMenu={(e) => handleTabContextMenu(e, tabId)}
                   className={cn(
-                    'relative flex items-center gap-1.5 px-3 py-2.5 cursor-pointer',
+                    'relative flex items-center gap-1.5 px-3 h-full cursor-pointer',
                     'text-xs font-medium whitespace-nowrap max-w-[180px]',
                     'transition-colors duration-150 group border-r border-white/5',
                     isActive

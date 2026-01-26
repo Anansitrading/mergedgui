@@ -452,7 +452,7 @@ function TabButton({ active, onClick, icon, label, count }: TabButtonProps) {
     <button
       onClick={onClick}
       className={cn(
-        "flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors relative",
+        "flex-1 flex items-center justify-center gap-1.5 h-full text-xs font-medium transition-colors relative",
         active
           ? "text-white"
           : "text-gray-500 hover:text-gray-300"
@@ -773,9 +773,9 @@ export function RightSidebar({
       ) : (
         // Expanded state
         <>
-          {/* Header with collapse button */}
-          <div className="shrink-0 px-3 pt-3 pb-2 flex items-center justify-between border-b border-white/10">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+          {/* Header with collapse button - matches Explorer row style */}
+          <div className="shrink-0 px-3 h-10 flex items-center justify-between border-b border-[#1e293b]">
+            <span className="text-xs text-slate-400 font-medium">
               History
             </span>
             <button
@@ -789,8 +789,8 @@ export function RightSidebar({
           </div>
 
           {/* Tab Navigation */}
-          <div className="shrink-0 px-2 border-b border-white/10">
-            <div className="flex">
+          <div className="shrink-0 px-2 h-10 border-b border-[#1e293b]">
+            <div className="flex h-full">
               <TabButton
                 active={activeTab === 'chats'}
                 onClick={() => setActiveTab('chats')}
@@ -809,9 +809,11 @@ export function RightSidebar({
           </div>
 
           {/* Search Input */}
-          <div className="shrink-0 px-3 py-2 border-b border-white/10">
+          <div className="shrink-0 px-3 py-2 border-b border-[#1e293b]">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
+              <div className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none">
+                <Search className="text-gray-500" size={14} />
+              </div>
               <input
                 type="text"
                 value={searchQuery}
@@ -823,9 +825,11 @@ export function RightSidebar({
               {searchQuery && (
                 <button
                   onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors"
+                  className="absolute inset-y-0 right-2 flex items-center"
                 >
-                  <X size={12} />
+                  <span className="p-0.5 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors">
+                    <X size={12} />
+                  </span>
                 </button>
               )}
             </div>

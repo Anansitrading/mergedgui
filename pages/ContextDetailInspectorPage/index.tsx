@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { LeftSidebar } from './components/LeftSidebar';
 import { MainContent } from './components/MainContent';
 import { RightSidebar } from './components/RightSidebar';
@@ -8,13 +8,24 @@ import { useProjectData } from '../../hooks/useProjectData';
 import { useIngestion, formatFileSizeFromBytes } from '../../contexts/IngestionContext';
 import { getPendingFileForIngestion } from '../../utils/fileTransferStore';
 import { PanelErrorBoundary } from '../../components/ErrorBoundary';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { NotificationBell } from '../../components/Notifications/NotificationBell';
+import { NotificationPanel } from '../../components/Notifications/NotificationPanel';
+import { UserAvatar } from '../../components/Dashboard/UserAvatar';
+import { UserDropdown } from '../../components/Dashboard/UserDropdown';
+import { SettingsModal } from '../../components/SettingsModal';
+import { ShareModal } from '../../components/ContextDetailInspector/modals/ShareModal';
+import { useNotifications } from '../../hooks/useNotifications';
+import { cn } from '../../utils/cn';
+import { tabConfig } from '../../styles/contextInspector';
+import { Loader2, AlertCircle, Share2, ArrowLeft, Wrench } from 'lucide-react';
 import type { TabType } from '../../types/contextInspector';
+import type { Notification, SettingsSection } from '../../types/settings';
 
-// Valid tab values (changelog moved to master-detail pattern in RightSidebar)
+// Valid tab values
 const VALID_TABS: TabType[] = ['overview', 'compression', 'enrichments'];
 
 export function ProjectDetailPage() {
+  const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: project, isLoading, error } = useProjectData(projectId);
@@ -23,16 +34,81 @@ export function ProjectDetailPage() {
   // Selected ingestion for master-detail pattern
   const [selectedIngestionNumber, setSelectedIngestionNumber] = useState<number | null>(null);
 
-  // Get tab from URL or default to 'overview'
+  // Tab state - controlled from here, synced with URL
   const tabParam = searchParams.get('tab') as TabType | null;
-  const initialTab: TabType = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview';
+  const [activeTab, setActiveTab] = useState<TabType>(
+    tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview'
+  );
+
+  // Sync activeTab with URL changes (browser back/forward)
+  useEffect(() => {
+    const urlTab = searchParams.get('tab') as TabType | null;
+    if (urlTab && VALID_TABS.includes(urlTab) && urlTab !== activeTab) {
+      setActiveTab(urlTab);
+    }
+  }, [searchParams]);
+
+  // Share modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  // Settings modal state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<SettingsSection | undefined>();
+
+  // User dropdown state
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+
+  // Notifications
+  const {
+    notifications,
+    groupedNotifications,
+    unreadCount,
+    isPanelOpen,
+    togglePanel,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    formatNotificationTime,
+  } = useNotifications();
+
+  const handleNotificationClick = useCallback((notification: Notification) => {
+    markAsRead(notification.id);
+    togglePanel(false);
+  }, [markAsRead, togglePanel]);
+
+  const handleLogout = useCallback(() => {
+    console.log('Logout clicked');
+  }, []);
+
+  // Tab change handler - updates both state and URL
+  const handleTabChange = useCallback((tab: TabType) => {
+    setActiveTab(tab);
+    setSelectedIngestionNumber(null);
+    setSearchParams({ tab }, { replace: true });
+  }, [setSearchParams]);
+
+  // Keyboard shortcuts for tab switching (Cmd/Ctrl + 1-3)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        const tabMap: Record<string, TabType> = {
+          '1': 'overview',
+          '2': 'compression',
+          '3': 'enrichments',
+        };
+        const tab = tabMap[e.key];
+        if (tab) {
+          e.preventDefault();
+          handleTabChange(tab);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleTabChange]);
 
   // Check for openIngestion param and trigger modal
   const openIngestionParam = searchParams.get('openIngestion');
-
-  // Ref to prevent React Strict Mode double-execution from consuming the
-  // one-time file store on the first run and then falling back to the empty
-  // modal on the second run (which would override the selected file).
   const fileConsumedRef = useRef(false);
 
   useEffect(() => {
@@ -51,7 +127,6 @@ export function ProjectDetailPage() {
           sizeBytes: pending.file.size,
         });
       } else {
-        // File data lost (e.g. page refresh), fall back to empty modal
         openIngestionModalEmpty();
       }
     }
@@ -59,12 +134,6 @@ export function ProjectDetailPage() {
     searchParams.delete('openIngestion');
     setSearchParams(searchParams, { replace: true });
   }, [openIngestionParam, project, openIngestionModal, openIngestionModalEmpty, searchParams, setSearchParams]);
-
-  // Handler to update tab in URL - also clears selected ingestion
-  const handleTabChange = useCallback((tab: TabType) => {
-    setSelectedIngestionNumber(null); // Clear ingestion detail view when switching tabs
-    setSearchParams({ tab }, { replace: true });
-  }, [setSearchParams]);
 
   // Handler for selecting an ingestion from the right sidebar
   const handleSelectIngestion = useCallback((ingestionNumber: number | null) => {
@@ -116,38 +185,176 @@ export function ProjectDetailPage() {
   // Main layout
   return (
     <>
-      <div className="h-screen w-full bg-[#0a0e1a] flex overflow-hidden">
-        {/* Left Sidebar - Source Files */}
-        <PanelErrorBoundary panelName="Source Files">
-          <LeftSidebar className="w-[240px] flex-shrink-0" projectName={project.name} projectId={project.id} />
-        </PanelErrorBoundary>
+      <div className="h-screen w-full bg-[#0a0e1a] flex flex-col overflow-hidden">
+        {/* Unified Top Bar (Row 1 - h-12) spanning full width */}
+        <header className="h-12 shrink-0 flex items-center border-b border-[#1e293b] bg-[#0d1220]">
+          {/* Left section - Back + Project name (same width as left sidebar) */}
+          <div className="w-[240px] shrink-0 h-full flex items-center gap-2 px-3 border-r border-[#1e293b]">
+            <button
+              onClick={() => navigate('/')}
+              className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors duration-150"
+              aria-label="Back to project dashboard"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <Wrench className="w-3.5 h-3.5 text-blue-400" />
+            </div>
+            <span className="text-sm font-semibold text-white truncate">
+              {project.name}
+            </span>
+          </div>
 
-        {/* Main Content - Tabs and Chat */}
-        <PanelErrorBoundary panelName="Main Content">
-          <MainContent
-            className="flex-1 min-w-0"
-            projectName={project.name}
-            projectId={project.id}
-            initialTab={initialTab}
-            onTabChange={handleTabChange}
-            selectedIngestionNumber={selectedIngestionNumber}
-            onCloseIngestionDetail={handleCloseIngestionDetail}
-          />
-        </PanelErrorBoundary>
+          {/* Center + Right section - Tabs + Share + Live + Bell + Avatar */}
+          <div className="flex-1 flex items-center justify-between px-6 h-full">
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-1 h-full">
+              {tabConfig.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id as TabType)}
+                  className={cn(
+                    'relative px-4 h-full text-sm font-medium transition-colors duration-150',
+                    'focus:outline-none',
+                    activeTab === tab.id
+                      ? 'text-white'
+                      : 'text-gray-400 hover:text-gray-200'
+                  )}
+                  title={`${tab.label} (\u2318${tab.shortcut})`}
+                >
+                  {tab.label}
+                  {activeTab === tab.id && (
+                    <div
+                      className={cn(
+                        'absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500',
+                        'animate-[fadeIn_150ms_ease-out]'
+                      )}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
 
-        {/* Right Sidebar - Chat History & Ingestion History */}
-        <PanelErrorBoundary panelName="History Panel">
-          <RightSidebar
-            className="flex-shrink-0"
-            projectId={project.id}
-            selectedIngestionNumber={selectedIngestionNumber}
-            onSelectIngestion={handleSelectIngestion}
-          />
-        </PanelErrorBoundary>
+            {/* Right actions: Share + Live + Bell + Avatar */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                className={cn(
+                  'flex items-center gap-2 px-3 h-8 rounded-lg',
+                  'text-gray-300 hover:text-white',
+                  'bg-white/5 hover:bg-white/10 border border-white/10',
+                  'transition-colors duration-150',
+                  'focus:outline-none focus:ring-2 focus:ring-blue-500/50'
+                )}
+                title="Share project"
+                aria-label="Share project"
+              >
+                <Share2 className="w-4 h-4" />
+                <span className="text-sm font-medium">Share</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                </span>
+                <span className="text-sm font-medium text-green-400">Live</span>
+              </div>
+
+              {/* Notification Bell with Panel */}
+              <div className="relative z-50">
+                <NotificationBell
+                  unreadCount={unreadCount}
+                  onClick={() => togglePanel(!isPanelOpen)}
+                />
+                <NotificationPanel
+                  isOpen={isPanelOpen}
+                  notifications={notifications}
+                  groupedNotifications={groupedNotifications}
+                  unreadCount={unreadCount}
+                  onClose={() => togglePanel(false)}
+                  onMarkAsRead={markAsRead}
+                  onMarkAllAsRead={markAllAsRead}
+                  onDelete={deleteNotification}
+                  onNotificationClick={handleNotificationClick}
+                  onSettingsClick={() => {
+                    togglePanel(false);
+                    setSettingsInitialSection('notifications');
+                    setIsSettingsOpen(true);
+                  }}
+                  formatTime={formatNotificationTime}
+                />
+              </div>
+
+              {/* User Avatar with Dropdown */}
+              <div className="relative z-50">
+                <UserAvatar
+                  onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+                  className="w-8 h-8 text-xs"
+                />
+                <UserDropdown
+                  isOpen={isUserDropdownOpen}
+                  onClose={() => setIsUserDropdownOpen(false)}
+                  onOpenProfile={() => {
+                    setSettingsInitialSection('profile');
+                    setIsSettingsOpen(true);
+                  }}
+                  onOpenSettings={() => setIsSettingsOpen(true)}
+                  onLogout={handleLogout}
+                />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Three columns below the top bar */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left Sidebar - Source Files */}
+          <PanelErrorBoundary panelName="Source Files">
+            <LeftSidebar className="w-[240px] flex-shrink-0" projectName={project.name} projectId={project.id} />
+          </PanelErrorBoundary>
+
+          {/* Main Content */}
+          <PanelErrorBoundary panelName="Main Content">
+            <MainContent
+              className="flex-1 min-w-0"
+              projectName={project.name}
+              projectId={project.id}
+              activeTab={activeTab}
+              selectedIngestionNumber={selectedIngestionNumber}
+              onCloseIngestionDetail={handleCloseIngestionDetail}
+            />
+          </PanelErrorBoundary>
+
+          {/* Right Sidebar - Chat History & Ingestion History */}
+          <PanelErrorBoundary panelName="History Panel">
+            <RightSidebar
+              className="flex-shrink-0"
+              projectId={project.id}
+              selectedIngestionNumber={selectedIngestionNumber}
+              onSelectIngestion={handleSelectIngestion}
+            />
+          </PanelErrorBoundary>
+        </div>
       </div>
 
       {/* Ingestion Modal */}
       <IngestionModal projectName={project.name} />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        initialSection={settingsInitialSection}
+      />
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        projectId={project.id}
+        projectName={project.name}
+      />
     </>
   );
 }
