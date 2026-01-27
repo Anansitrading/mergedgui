@@ -9,7 +9,7 @@ import {
   Folder,
   ChevronRight,
   GripVertical,
-  Globe,
+
   Download,
 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
@@ -21,7 +21,6 @@ interface LeftSidebarProps {
   className?: string;
   style?: React.CSSProperties;
   projectName?: string;
-  projectId?: string;
 }
 
 // File type icon mapping
@@ -248,7 +247,7 @@ interface ContextMenuState {
   file?: SourceFile;
 }
 
-export function LeftSidebar({ className, style, projectName = 'Project', projectId }: LeftSidebarProps) {
+export function LeftSidebar({ className, style, projectName = 'Project' }: LeftSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isRootExpanded, setIsRootExpanded] = useState(true);
@@ -394,13 +393,6 @@ export function LeftSidebar({ className, style, projectName = 'Project', project
   const handleOpenSearch = useCallback(() => {
     setIsSearchOpen(true);
   }, []);
-
-  // Open project preview in new tab
-  const handleOpenPreview = useCallback(() => {
-    if (!projectId) return;
-    const previewUrl = `https://app.kijko.nl/preview/${projectId}`;
-    window.open(previewUrl, '_blank', 'noopener,noreferrer');
-  }, [projectId]);
 
   // Toggle folder expansion
   const handleFolderToggle = useCallback((folderId: string) => {
@@ -624,14 +616,6 @@ export function LeftSidebar({ className, style, projectName = 'Project', project
           <div className="flex items-center justify-between w-full">
             <span className="text-xs text-slate-400 font-medium">Explorer</span>
             <div className="flex items-center gap-1">
-              <button
-                onClick={handleOpenPreview}
-                disabled={!projectId}
-                className="p-1 text-slate-500 hover:text-slate-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Preview project in new tab"
-              >
-                <Globe size={14} />
-              </button>
               <button
                 onClick={handleOpenSearch}
                 className="p-1 text-slate-500 hover:text-slate-300 transition-colors"

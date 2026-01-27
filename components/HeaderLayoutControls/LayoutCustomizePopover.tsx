@@ -6,7 +6,7 @@ import { cn } from '../../utils/cn';
 const PANEL_LABELS: Record<PanelPosition, string> = {
   left: 'Explorer',
   center: 'Chat',
-  right: 'History',
+  right: 'Hypervisa',
 };
 
 const PANEL_COLORS: Record<PanelPosition, string> = {

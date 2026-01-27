@@ -364,7 +364,7 @@ function ProjectDetailPageContent() {
           <div className="shrink-0 h-full flex items-center gap-2 px-3">
             <button
               onClick={() => navigate('/')}
-              className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors duration-150"
+              className="flex-shrink-0 p-2 rounded-lg bg-white/[0.07] border border-white/[0.08] text-gray-300 hover:text-white hover:bg-white/[0.13] hover:border-white/[0.15] transition-all duration-150"
               aria-label="Back to dashboard"
               title="Back to dashboard"
             >
@@ -521,15 +521,15 @@ function ProjectDetailPageContent() {
               ))}
             </div>
 
-            {/* Right actions: Layout Controls + Share + Live + Bell + Avatar */}
+            {/* Right actions: Layout Controls + Share + Bell + Avatar */}
             <div className="flex items-center gap-3 flex-shrink-0">
               {/* Layout Toggle Controls */}
-              <HeaderLayoutControls />
+              <HeaderLayoutControls projectId={project.id} />
 
               <button
                 onClick={() => setIsShareModalOpen(true)}
                 className={cn(
-                  'flex items-center gap-2 px-3 h-8 rounded-lg',
+                  'flex items-center justify-center w-8 h-8 rounded-lg',
                   'text-gray-300 hover:text-white',
                   'bg-white/5 hover:bg-white/10 border border-white/10',
                   'transition-colors duration-150',
@@ -539,16 +539,7 @@ function ProjectDetailPageContent() {
                 aria-label="Share project"
               >
                 <Share2 className="w-4 h-4" />
-                <span className="text-sm font-medium">Share</span>
               </button>
-
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
-                </span>
-                <span className="text-sm font-medium text-green-400">Live</span>
-              </div>
 
               {/* Notification Bell with Panel */}
               <div className="relative z-50">
@@ -620,7 +611,6 @@ function ProjectDetailPageContent() {
                   className="flex-shrink-0"
                   style={{ width: sidebarWidth }}
                   projectName={project.name}
-                  projectId={project.id}
                 />
               )}
             </PanelErrorBoundary>
@@ -694,7 +684,6 @@ function ProjectDetailPageContent() {
                   className="flex-shrink-0"
                   style={{ width: sidebarWidth }}
                   projectName={project.name}
-                  projectId={project.id}
                 />
               )}
             </PanelErrorBoundary>
@@ -768,7 +757,6 @@ function ProjectDetailPageContent() {
                   className="flex-shrink-0"
                   style={{ width: sidebarWidth }}
                   projectName={project.name}
-                  projectId={project.id}
                 />
               )}
             </PanelErrorBoundary>

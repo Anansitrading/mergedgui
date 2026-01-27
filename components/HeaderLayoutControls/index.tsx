@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   LayoutGrid,
   PanelLeftClose,
@@ -7,6 +7,7 @@ import {
   PanelBottomOpen,
   PanelRightClose,
   PanelRightOpen,
+  Globe,
 } from 'lucide-react';
 import { useLayout } from '../../contexts/LayoutContext';
 import { LayoutCustomizePopover } from './LayoutCustomizePopover';
@@ -15,10 +16,19 @@ import { cn } from '../../utils/cn';
 const btnBase =
   'p-1.5 rounded-lg transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500/50';
 
-export function HeaderLayoutControls() {
+interface HeaderLayoutControlsProps {
+  projectId?: string;
+}
+
+export function HeaderLayoutControls({ projectId }: HeaderLayoutControlsProps) {
   const { state, toggleLeftSidebar, toggleChatInput, toggleRightSidebar } = useLayout();
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const customizeRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenPreview = useCallback(() => {
+    if (!projectId) return;
+    window.open(`https://app.kijko.nl/preview/${projectId}`, '_blank', 'noopener,noreferrer');
+  }, [projectId]);
 
   // Close popover on Escape
   useEffect(() => {
@@ -53,6 +63,17 @@ export function HeaderLayoutControls() {
 
   return (
     <div className="flex items-center gap-0.5">
+      {/* 0. Preview in browser */}
+      <button
+        onClick={handleOpenPreview}
+        disabled={!projectId}
+        className={cn(btnBase, 'text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed')}
+        title="Preview project in new tab"
+        aria-label="Preview project in new tab"
+      >
+        <Globe className="w-4 h-4" />
+      </button>
+
       {/* 1. Customize Layout */}
       <div ref={customizeRef} className="relative">
         <button

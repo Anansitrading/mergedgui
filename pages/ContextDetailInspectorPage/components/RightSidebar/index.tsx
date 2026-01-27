@@ -782,7 +782,7 @@ export function RightSidebar({
               </div>
             ) : (
               <div className="flex items-center justify-between w-full">
-                <span className="text-xs text-slate-400 font-medium">Ingestions</span>
+                <span className="text-xs text-slate-400 font-medium">Hypervisa</span>
                 <div className="flex items-center gap-0.5">
                   {allUniqueTags.length > 0 && (
                     <button
