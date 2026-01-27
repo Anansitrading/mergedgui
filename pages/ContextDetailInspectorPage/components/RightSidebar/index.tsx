@@ -1,13 +1,9 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus, FileText, GitBranch, AlignLeft, Tag, Archive, Shield, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Search, X, Pencil, Trash2, Loader2, Plus, FileText, GitBranch, AlignLeft, Tag, Archive, Shield, Eye } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
-import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
-import { useLayout } from '../../../../contexts/LayoutContext';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
 import { useCompressionData } from '../../../../components/ContextDetailInspector/tabs/CompressionTab/hooks';
-import { formatRelativeTime } from '../../../../utils/chatHistoryStorage';
 import { formatDateTime, formatFileChange } from '../../../../utils/formatting';
-import type { ChatHistoryItem } from '../../../../types/chatHistory';
 import type { IngestionEntry, IngestionSourceType } from '../../../../types/contextInspector';
 
 function getSourceIcon(sourceType?: IngestionSourceType) {
@@ -30,38 +26,6 @@ const STORAGE_KEY = 'kijko_right_sidebar_collapsed';
 const EXPANDED_WIDTH = 280;
 const COLLAPSED_WIDTH = 48;
 const TRANSITION_DURATION = 300;
-
-// ==========================================
-// Date Group Helpers
-// ==========================================
-
-type DateGroup = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'older';
-
-function getDateGroup(date: Date): DateGroup {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const last7Days = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const last30Days = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-  const itemDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-  if (itemDate >= today) return 'today';
-  if (itemDate >= yesterday) return 'yesterday';
-  if (itemDate >= last7Days) return 'last7days';
-  if (itemDate >= last30Days) return 'last30days';
-  return 'older';
-}
-
-function getGroupLabel(group: DateGroup): string {
-  switch (group) {
-    case 'today': return 'Today';
-    case 'yesterday': return 'Yesterday';
-    case 'last7days': return 'Last 7 Days';
-    case 'last30days': return 'Last 30 Days';
-    case 'older': return 'Older';
-  }
-}
 
 // ==========================================
 // Debounce Hook
@@ -93,7 +57,7 @@ interface DeleteConfirmDialogProps {
   onCancel: () => void;
 }
 
-function DeleteConfirmDialog({ isOpen, title, heading = 'Delete Chat', onConfirm, onCancel }: DeleteConfirmDialogProps) {
+function DeleteConfirmDialog({ isOpen, title, heading = 'Delete', onConfirm, onCancel }: DeleteConfirmDialogProps) {
   if (!isOpen) return null;
 
   return (
@@ -300,138 +264,6 @@ function TagEditor({ tags, onSave, onCancel }: TagEditorProps) {
 }
 
 // ==========================================
-// Chat History Item Component
-// ==========================================
-
-interface ChatHistoryItemComponentProps {
-  item: ChatHistoryItem;
-  isActive: boolean;
-  onSelect: () => void;
-  onRename: (newTitle: string) => void;
-  onDelete: () => void;
-}
-
-function ChatHistoryItemComponent({
-  item,
-  isActive,
-  onSelect,
-  onRename,
-  onDelete
-}: ChatHistoryItemComponentProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  const handleRename = useCallback((newTitle: string) => {
-    setIsEditing(false);
-    if (newTitle !== item.title) {
-      onRename(newTitle);
-    }
-  }, [item.title, onRename]);
-
-  const handleDeleteClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowDeleteConfirm(true);
-  }, []);
-
-  const handleConfirmDelete = useCallback(() => {
-    setShowDeleteConfirm(false);
-    onDelete();
-  }, [onDelete]);
-
-  return (
-    <>
-      <div
-        onClick={onSelect}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        className={cn(
-          "group relative px-3 py-2.5 rounded-md cursor-pointer transition-all duration-150",
-          "border border-transparent",
-          isActive
-            ? "bg-blue-500/10 border-blue-500/30"
-            : "hover:bg-white/5",
-          "focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-        )}
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onSelect();
-          }
-        }}
-        role="button"
-        aria-pressed={isActive}
-      >
-        {/* Title row */}
-        <div className="flex items-center justify-between mb-1">
-          {isEditing ? (
-            <InlineEdit
-              value={item.title}
-              onSave={handleRename}
-              onCancel={() => setIsEditing(false)}
-            />
-          ) : (
-            <h4 className="text-xs font-medium text-white truncate pr-2 flex-1">
-              {item.title}
-            </h4>
-          )}
-
-          {/* Actions on hover */}
-          {isHovered && !isEditing && (
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditing(true);
-                }}
-                className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-                title="Rename"
-              >
-                <Pencil size={12} />
-              </button>
-              <button
-                onClick={handleDeleteClick}
-                className="p-1 rounded hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-colors"
-                title="Delete"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          )}
-
-          {!isHovered && !isEditing && (
-            <span className="text-[10px] text-gray-500 shrink-0">
-              {formatRelativeTime(item.lastActivity)}
-            </span>
-          )}
-        </div>
-
-        {/* Preview text */}
-        <p className="text-[11px] text-gray-400 truncate leading-relaxed">
-          {item.preview}
-        </p>
-
-        {/* Message count badge */}
-        <div className="flex items-center gap-1 mt-1.5">
-          <div className="flex items-center gap-1 text-[10px] text-gray-500">
-            <MessageSquare size={10} />
-            <span>{item.messageCount}</span>
-          </div>
-        </div>
-      </div>
-
-      <DeleteConfirmDialog
-        isOpen={showDeleteConfirm}
-        title={item.title}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setShowDeleteConfirm(false)}
-      />
-    </>
-  );
-}
-
-// ==========================================
 // Ingestion Entry Row Component (Compact)
 // ==========================================
 
@@ -532,8 +364,6 @@ function IngestionEntryRow({ entry, isSelected, onSelect, onRename, onDelete, on
     setShowDeleteConfirm(false);
     onDelete?.();
   }, [onDelete]);
-
-
 
   return (
     <>
@@ -695,49 +525,26 @@ function IngestionEntryRow({ entry, isSelected, onSelect, onRename, onDelete, on
 }
 
 // ==========================================
-// Group Header Component
-// ==========================================
-
-function GroupHeader({ label }: { label: string }) {
-  return (
-    <div className="sticky top-0 z-10 px-3 py-1.5 bg-[#0d1220]/95 backdrop-blur-sm">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-        {label}
-      </span>
-    </div>
-  );
-}
-
-// ==========================================
 // Empty State Component
 // ==========================================
 
-function EmptyState({ type, hasSearch }: { type: 'chats' | 'ingestions'; hasSearch: boolean }) {
-  const Icon = type === 'chats' ? MessageSquare : Clock;
-
+function EmptyState({ hasSearch }: { hasSearch: boolean }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
       <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
         {hasSearch ? (
           <Search size={24} className="text-gray-500" />
         ) : (
-          <Icon size={24} className="text-gray-500" />
+          <Clock size={24} className="text-gray-500" />
         )}
       </div>
       <h3 className="text-sm font-medium text-gray-400 mb-1">
-        {hasSearch
-          ? 'No results found'
-          : type === 'chats'
-            ? 'No chat history'
-            : 'No ingestion history'
-        }
+        {hasSearch ? 'No results found' : 'No ingestion history'}
       </h3>
       <p className="text-xs text-gray-500 max-w-[180px]">
         {hasSearch
           ? 'Try a different search term'
-          : type === 'chats'
-            ? 'Start a new conversation to see your history here.'
-            : 'Ingest files to see your history here.'
+          : 'Ingest files to see your history here.'
         }
       </p>
     </div>
@@ -777,8 +584,6 @@ export function RightSidebar({
   onToggleCollapse: externalToggleCollapse,
   expandedWidth,
 }: RightSidebarProps) {
-  const { state: chatState, loadChat, deleteChat, renameChat } = useChatHistory();
-  const { state: layoutState, closeChatHistory } = useLayout();
   const {
     history: ingestionHistory,
     metrics: compressionMetrics,
@@ -817,13 +622,8 @@ export function RightSidebar({
   // Use external collapse state when provided, otherwise fall back to internal
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
-  const activeTab = layoutState.rightSidebarTab;
-
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
-
-  const chatHistory = chatState.historyItems;
-  const currentActiveChatId = chatState.activeChatId;
 
   // Debounced search
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -860,12 +660,6 @@ export function RightSidebar({
     onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : (expandedWidth ?? EXPANDED_WIDTH));
   }, []);
 
-  // Clear search and tag filters when switching tabs
-  useEffect(() => {
-    setSearchQuery('');
-    setSelectedTagFilters([]);
-  }, [activeTab]);
-
   const handleToggleCollapse = useCallback(() => {
     if (externalToggleCollapse) {
       externalToggleCollapse();
@@ -873,47 +667,6 @@ export function RightSidebar({
       setInternalCollapsed(prev => !prev);
     }
   }, [externalToggleCollapse]);
-
-  // Filter and group chats
-  const { groupedChats, hasChatsResults } = useMemo(() => {
-    let filtered = chatHistory;
-    if (debouncedSearch.trim()) {
-      const searchLower = debouncedSearch.toLowerCase();
-      filtered = chatHistory.filter(item =>
-        item.title.toLowerCase().includes(searchLower) ||
-        item.preview.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // Sort by lastActivity (newest first)
-    const sorted = [...filtered].sort((a, b) => {
-      const dateA = a.lastActivity instanceof Date ? a.lastActivity : new Date(a.lastActivity);
-      const dateB = b.lastActivity instanceof Date ? b.lastActivity : new Date(b.lastActivity);
-      return dateB.getTime() - dateA.getTime();
-    });
-
-    // Group by date
-    const groups = new Map<DateGroup, ChatHistoryItem[]>();
-    const groupOrder: DateGroup[] = ['today', 'yesterday', 'last7days', 'last30days', 'older'];
-
-    sorted.forEach(item => {
-      const date = item.lastActivity instanceof Date ? item.lastActivity : new Date(item.lastActivity);
-      const group = getDateGroup(date);
-      if (!groups.has(group)) {
-        groups.set(group, []);
-      }
-      groups.get(group)!.push(item);
-    });
-
-    const result: Array<{ group: DateGroup; items: ChatHistoryItem[] }> = [];
-    groupOrder.forEach(group => {
-      if (groups.has(group)) {
-        result.push({ group, items: groups.get(group)! });
-      }
-    });
-
-    return { groupedChats: result, hasChatsResults: sorted.length > 0 };
-  }, [chatHistory, debouncedSearch]);
 
   // Filter ingestions
   const { filteredIngestions, hasIngestionsResults } = useMemo(() => {
@@ -940,21 +693,6 @@ export function RightSidebar({
 
     return { filteredIngestions: sorted, hasIngestionsResults: sorted.length > 0 };
   }, [ingestionHistory, debouncedSearch, selectedTagFilters]);
-
-  // Chat handlers
-  const handleSelectChat = useCallback((id: string) => {
-    if (id !== chatState.activeChatId) {
-      loadChat(id);
-    }
-  }, [chatState.activeChatId, loadChat]);
-
-  const handleRenameChat = useCallback((id: string, newTitle: string) => {
-    renameChat(id, newTitle);
-  }, [renameChat]);
-
-  const handleDeleteChat = useCallback(async (id: string) => {
-    await deleteChat(id);
-  }, [deleteChat]);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
@@ -1062,45 +800,19 @@ export function RightSidebar({
             accept=".ts,.tsx,.js,.jsx,.json,.md,.css,.html,.py,.txt"
           />
 
-          {/* Header with collapse button - matches Explorer row style */}
+          {/* Header */}
           <div className="shrink-0 px-3 h-10 flex items-center justify-between border-b border-[#1e293b]">
-            {activeTab === 'chats' ? (
-              <>
-                <div className="flex items-center gap-1.5">
-                  <MessageSquare size={14} className="text-blue-400" />
-                  <span className="text-xs text-slate-400 font-medium">
-                    Chat History
-                  </span>
-                  {chatHistory.length > 0 && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
-                      {chatHistory.length}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={closeChatHistory}
-                  className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-                  title="Close chat history"
-                  aria-label="Close chat history"
-                >
-                  <X size={14} />
-                </button>
-              </>
-            ) : (
-              <>
-                <span className="text-xs text-slate-400 font-medium">
-                  Ingestions
-                </span>
-                <button
-                  onClick={handleToggleCollapse}
-                  className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-                  title="Collapse panel"
-                  aria-label="Collapse panel"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </>
-            )}
+            <span className="text-xs text-slate-400 font-medium">
+              Ingestions
+            </span>
+            <button
+              onClick={handleToggleCollapse}
+              className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+              title="Collapse panel"
+              aria-label="Collapse panel"
+            >
+              <ChevronRight size={14} />
+            </button>
           </div>
 
           {/* Search Input */}
@@ -1113,8 +825,8 @@ export function RightSidebar({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={activeTab === 'chats' ? 'Search chats...' : 'Search ingestions...'}
-                aria-label={`Search ${activeTab}`}
+                placeholder="Search ingestions..."
+                aria-label="Search ingestions"
                 className="w-full bg-white/5 border border-white/10 rounded-md py-1.5 pl-8 pr-8 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-gray-500"
               />
               {searchQuery && (
@@ -1132,212 +844,171 @@ export function RightSidebar({
 
           {/* Content */}
           <div className="flex-1 overflow-hidden">
-            {activeTab === 'chats' ? (
-              // Chats Tab Content
-              chatState.isLoading ? (
-                <div className="flex-1 flex items-center justify-center h-full">
+            <div
+              className={cn(
+                "h-full flex flex-col transition-colors",
+                isIngestionDragOver && "bg-blue-500/10 ring-2 ring-inset ring-blue-500/40"
+              )}
+              onDragOver={handleIngestionDragOver}
+              onDragLeave={handleIngestionDragLeave}
+              onDrop={handleIngestionDrop}
+            >
+              {/* New Ingestion Button */}
+              <div className="shrink-0 px-2 pt-2 pb-1">
+                <button
+                  onClick={handleNewIngestion}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/30 transition-colors"
+                >
+                  <Plus size={14} />
+                  <span>New Ingestion</span>
+                </button>
+              </div>
+
+              {/* Tag Filter Chips */}
+              {allUniqueTags.length > 0 && (
+                <div className="shrink-0 px-2 pb-1">
+                  <div className="flex items-center gap-1 mb-1">
+                    <Tag size={10} className="text-slate-500 flex-shrink-0" />
+                    <span className="text-[10px] text-slate-500 font-medium">Filter by tag</span>
+                    {selectedTagFilters.length > 0 && (
+                      <button
+                        onClick={handleClearTagFilters}
+                        className="ml-auto text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {allUniqueTags.map(tag => {
+                      const isActive = selectedTagFilters.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => handleToggleTagFilter(tag)}
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
+                            isActive
+                              ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
+                              : "bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
+                          )}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Ingestion List */}
+              {ingestionLoading ? (
+                <div className="flex-1 flex items-center justify-center">
                   <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
                 </div>
-              ) : !hasChatsResults ? (
-                <EmptyState type="chats" hasSearch={debouncedSearch.trim().length > 0} />
+              ) : !hasIngestionsResults ? (
+                <EmptyState hasSearch={debouncedSearch.trim().length > 0 || selectedTagFilters.length > 0} />
               ) : (
-                <div className="h-full overflow-y-auto">
-                  <div className="pb-4">
-                    {groupedChats.map(({ group, items }) => (
-                      <div key={group}>
-                        <GroupHeader label={getGroupLabel(group)} />
-                        <div className="px-2 py-1 space-y-0.5">
-                          {items.map((item) => (
-                            <ChatHistoryItemComponent
-                              key={item.id}
-                              item={item}
-                              isActive={currentActiveChatId === item.id}
-                              onSelect={() => handleSelectChat(item.id)}
-                              onRename={(newTitle) => handleRenameChat(item.id, newTitle)}
-                              onDelete={() => handleDeleteChat(item.id)}
-                            />
-                          ))}
-                        </div>
-                      </div>
+                <div className="flex-1 overflow-y-auto">
+                  <div className="py-1">
+                    {filteredIngestions.map((entry) => (
+                      <IngestionEntryRow
+                        key={entry.number}
+                        entry={entry}
+                        isSelected={selectedIngestionSet.has(entry.number)}
+                        onSelect={(e) => {
+                          const isCtrl = 'ctrlKey' in e && (e.ctrlKey || e.metaKey);
+                          if (isCtrl) {
+                            const next = selectedIngestionSet.has(entry.number)
+                              ? selectedIngestionNumbers.filter(n => n !== entry.number)
+                              : [...selectedIngestionNumbers, entry.number];
+                            onSelectIngestion?.(next);
+                          } else {
+                            onSelectIngestion?.([entry.number]);
+                            onNavigateToIngestion?.(entry.number);
+                          }
+                        }}
+                        onRename={(newName) => renameIngestion(entry.number, newName)}
+                        onDelete={() => deleteIngestion(entry.number)}
+                        onUpdateTags={(tags) => updateIngestionTags(entry.number, tags)}
+                        onCompress={() => compressIngestion(entry.number)}
+                      />
                     ))}
                   </div>
                 </div>
-              )
-            ) : (
-              // Ingestions Tab Content
-              <div
-                className={cn(
-                  "h-full flex flex-col transition-colors",
-                  isIngestionDragOver && "bg-blue-500/10 ring-2 ring-inset ring-blue-500/40"
-                )}
-                onDragOver={handleIngestionDragOver}
-                onDragLeave={handleIngestionDragLeave}
-                onDrop={handleIngestionDrop}
-              >
-                {/* New Ingestion Button */}
-                <div className="shrink-0 px-2 pt-2 pb-1">
-                  <button
-                    onClick={handleNewIngestion}
-                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/30 transition-colors"
-                  >
-                    <Plus size={14} />
-                    <span>New Ingestion</span>
-                  </button>
-                </div>
-
-                {/* Tag Filter Chips */}
-                {allUniqueTags.length > 0 && (
-                  <div className="shrink-0 px-2 pb-1">
-                    <div className="flex items-center gap-1 mb-1">
-                      <Tag size={10} className="text-slate-500 flex-shrink-0" />
-                      <span className="text-[10px] text-slate-500 font-medium">Filter by tag</span>
-                      {selectedTagFilters.length > 0 && (
-                        <button
-                          onClick={handleClearTagFilters}
-                          className="ml-auto text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {allUniqueTags.map(tag => {
-                        const isActive = selectedTagFilters.includes(tag);
-                        return (
-                          <button
-                            key={tag}
-                            onClick={() => handleToggleTagFilter(tag)}
-                            className={cn(
-                              "text-[10px] px-2 py-0.5 rounded-full border transition-colors",
-                              isActive
-                                ? "bg-blue-500/20 border-blue-500/40 text-blue-300"
-                                : "bg-slate-800/50 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300"
-                            )}
-                          >
-                            {tag}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Ingestion List */}
-                {ingestionLoading ? (
-                  <div className="flex-1 flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
-                  </div>
-                ) : !hasIngestionsResults ? (
-                  <EmptyState type="ingestions" hasSearch={debouncedSearch.trim().length > 0 || selectedTagFilters.length > 0} />
-                ) : (
-                  <div className="flex-1 overflow-y-auto">
-                    <div className="py-1">
-                      {filteredIngestions.map((entry) => (
-                        <IngestionEntryRow
-                          key={entry.number}
-                          entry={entry}
-                          isSelected={selectedIngestionSet.has(entry.number)}
-                          onSelect={(e) => {
-                            const isCtrl = 'ctrlKey' in e && (e.ctrlKey || e.metaKey);
-                            if (isCtrl) {
-                              // Ctrl+click: toggle this entry in/out of selection
-                              const next = selectedIngestionSet.has(entry.number)
-                                ? selectedIngestionNumbers.filter(n => n !== entry.number)
-                                : [...selectedIngestionNumbers, entry.number];
-                              onSelectIngestion?.(next);
-                            } else {
-                              // Regular click: navigate to Knowledge Base tab and highlight this ingestion
-                              onSelectIngestion?.([entry.number]);
-                              onNavigateToIngestion?.(entry.number);
-                            }
-                          }}
-                          onRename={(newName) => renameIngestion(entry.number, newName)}
-                          onDelete={() => deleteIngestion(entry.number)}
-                          onUpdateTags={(tags) => updateIngestionTags(entry.number, tags)}
-                          onCompress={() => compressIngestion(entry.number)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Size Bar */}
-          {activeTab === 'ingestions' && (
-            <div className="shrink-0 border-t border-[#1e293b] p-3 bg-slate-900/50">
-              {selectedIngestions.length === 1 ? (
-                // Single selection: show that ingestion's stats
-                <>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Ingestion #{selectedIngestions[0].number}:</span>
-                    <span className="text-slate-300 font-medium">
-                      {selectedIngestions[0].tokens.toLocaleString()} tokens
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                      style={{ width: `${totalIngestionTokens > 0 ? (selectedIngestions[0].tokens / totalIngestionTokens) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>{selectedIngestions[0].filesAdded} files added</span>
-                    <span>{totalIngestionTokens > 0 ? ((selectedIngestions[0].tokens / totalIngestionTokens) * 100).toFixed(1) : 0}% of total</span>
-                  </div>
-                </>
-              ) : selectedIngestions.length > 1 ? (
-                // Multi-selection: show aggregated stats
-                (() => {
-                  const totalSelectedTokens = selectedIngestions.reduce((sum, e) => sum + e.tokens, 0);
-                  const totalSelectedFiles = selectedIngestions.reduce((sum, e) => sum + e.filesAdded, 0);
-                  return (
-                    <>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">{selectedIngestions.length} selected:</span>
-                        <span className="text-slate-300 font-medium">
-                          {totalSelectedTokens.toLocaleString()} tokens
-                        </span>
-                      </div>
-                      <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                          style={{ width: `${totalIngestionTokens > 0 ? (totalSelectedTokens / totalIngestionTokens) * 100 : 0}%` }}
-                        />
-                      </div>
-                      <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
-                        <span>{totalSelectedFiles} files added</span>
-                        <span>{totalIngestionTokens > 0 ? ((totalSelectedTokens / totalIngestionTokens) * 100).toFixed(1) : 0}% of total</span>
-                      </div>
-                    </>
-                  );
-                })()
-              ) : (
-                // No selection: show total context stats
-                <>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Total context:</span>
-                    <span className="text-slate-300 font-medium">
-                      {compressionMetrics ? compressionMetrics.originalTokens.toLocaleString() : '—'} tokens
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-600 rounded-full transition-all duration-300"
-                      style={{ width: `${compressionMetrics?.savingsPercent ?? 0}%` }}
-                    />
-                  </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
-                    <span>{ingestionHistory.length} ingestions</span>
-                    <span>
-                      {compressionMetrics ? `${compressionMetrics.compressedTokens.toLocaleString()} compressed` : '—'}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          <div className="shrink-0 border-t border-[#1e293b] p-3 bg-slate-900/50">
+            {selectedIngestions.length === 1 ? (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Ingestion #{selectedIngestions[0].number}:</span>
+                  <span className="text-slate-300 font-medium">
+                    {selectedIngestions[0].tokens.toLocaleString()} tokens
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                    style={{ width: `${totalIngestionTokens > 0 ? (selectedIngestions[0].tokens / totalIngestionTokens) * 100 : 0}%` }}
+                  />
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+                  <span>{selectedIngestions[0].filesAdded} files added</span>
+                  <span>{totalIngestionTokens > 0 ? ((selectedIngestions[0].tokens / totalIngestionTokens) * 100).toFixed(1) : 0}% of total</span>
+                </div>
+              </>
+            ) : selectedIngestions.length > 1 ? (
+              (() => {
+                const totalSelectedTokens = selectedIngestions.reduce((sum, e) => sum + e.tokens, 0);
+                const totalSelectedFiles = selectedIngestions.reduce((sum, e) => sum + e.filesAdded, 0);
+                return (
+                  <>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500">{selectedIngestions.length} selected:</span>
+                      <span className="text-slate-300 font-medium">
+                        {totalSelectedTokens.toLocaleString()} tokens
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                        style={{ width: `${totalIngestionTokens > 0 ? (totalSelectedTokens / totalIngestionTokens) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>{totalSelectedFiles} files added</span>
+                      <span>{totalIngestionTokens > 0 ? ((totalSelectedTokens / totalIngestionTokens) * 100).toFixed(1) : 0}% of total</span>
+                    </div>
+                  </>
+                );
+              })()
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Total context:</span>
+                  <span className="text-slate-300 font-medium">
+                    {compressionMetrics ? compressionMetrics.originalTokens.toLocaleString() : '—'} tokens
+                  </span>
+                </div>
+                <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                    style={{ width: `${compressionMetrics?.savingsPercent ?? 0}%` }}
+                  />
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+                  <span>{ingestionHistory.length} ingestions</span>
+                  <span>
+                    {compressionMetrics ? `${compressionMetrics.compressedTokens.toLocaleString()} compressed` : '—'}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
 
         </>
       )}

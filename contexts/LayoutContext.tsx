@@ -88,11 +88,17 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openChatHistory = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      rightSidebarCollapsed: false,
-      rightSidebarTab: 'chats',
-    }));
+    setState((prev) => {
+      // Ensure 'right' panel is at the rightmost position
+      const others = prev.panelOrder.filter((p) => p !== 'right') as [PanelPosition, PanelPosition];
+      const panelOrder: [PanelPosition, PanelPosition, PanelPosition] = [...others, 'right'];
+      return {
+        ...prev,
+        rightSidebarCollapsed: false,
+        rightSidebarTab: 'chats',
+        panelOrder,
+      };
+    });
   }, []);
 
   const closeChatHistory = useCallback(() => {

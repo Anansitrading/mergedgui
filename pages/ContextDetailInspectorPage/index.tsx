@@ -123,11 +123,13 @@ function ProjectDetailPageContent() {
   const handleLeftResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     leftResizeStartRef.current = { x: e.clientX, width: sidebarWidth };
+    const isOnLeft = layoutState.panelOrder.indexOf('left') < layoutState.panelOrder.indexOf('center');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
     const onMouseMove = (ev: MouseEvent) => {
-      const delta = ev.clientX - leftResizeStartRef.current.x;
+      const rawDelta = ev.clientX - leftResizeStartRef.current.x;
+      const delta = isOnLeft ? rawDelta : -rawDelta;
       const newWidth = Math.min(Math.max(leftResizeStartRef.current.width + delta, 180), 500);
       setSidebarWidth(newWidth);
     };
@@ -141,7 +143,7 @@ function ProjectDetailPageContent() {
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [sidebarWidth]);
+  }, [sidebarWidth, layoutState.panelOrder]);
 
   // Right sidebar resizing (delta-based)
   const [rightSidebarWidth, setRightSidebarWidth] = useState(280);
@@ -150,12 +152,14 @@ function ProjectDetailPageContent() {
   const handleRightResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     rightResizeStartRef.current = { x: e.clientX, width: rightSidebarWidth };
+    const isOnRight = layoutState.panelOrder.indexOf('right') > layoutState.panelOrder.indexOf('center');
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
     const onMouseMove = (ev: MouseEvent) => {
-      // Dragging left = wider right sidebar
-      const delta = rightResizeStartRef.current.x - ev.clientX;
+      // Dragging toward center = wider sidebar
+      const rawDelta = rightResizeStartRef.current.x - ev.clientX;
+      const delta = isOnRight ? rawDelta : -rawDelta;
       const newWidth = Math.min(Math.max(rightResizeStartRef.current.width + delta, 180), 500);
       setRightSidebarWidth(newWidth);
     };
@@ -169,7 +173,7 @@ function ProjectDetailPageContent() {
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, [rightSidebarWidth]);
+  }, [rightSidebarWidth, layoutState.panelOrder]);
 
   // Notifications
   const {
@@ -292,10 +296,18 @@ function ProjectDetailPageContent() {
     handleTabChange('overview');
   }, [createNewChat, addMessage, handleTabChange]);
 
-  // Panel order indices for CSS order
-  const leftOrder = layoutState.panelOrder.indexOf('left');
-  const centerOrder = layoutState.panelOrder.indexOf('center');
-  const rightOrder = layoutState.panelOrder.indexOf('right');
+  // Panel order indices (use 0-4 scale so resize handles fit between panels)
+  const leftIdx = layoutState.panelOrder.indexOf('left');
+  const centerIdx = layoutState.panelOrder.indexOf('center');
+  const rightIdx = layoutState.panelOrder.indexOf('right');
+
+  const leftPanelOrder = leftIdx * 2;
+  const centerPanelOrder = centerIdx * 2;
+  const rightPanelOrder = rightIdx * 2;
+
+  // Resize handle order: between its panel and the center panel
+  const leftHandleOrder = leftIdx < centerIdx ? leftIdx * 2 + 1 : leftIdx * 2 - 1;
+  const rightHandleOrder = rightIdx < centerIdx ? rightIdx * 2 + 1 : rightIdx * 2 - 1;
 
   // Loading state
   if (isLoading) {
@@ -567,7 +579,7 @@ function ProjectDetailPageContent() {
             {layoutState.leftSidebarCollapsed ? (
               <aside
                 className="flex-shrink-0 h-full bg-[#0d1220] border-r border-[#1e293b] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
-                style={{ width: 48, order: leftOrder }}
+                style={{ width: 48, order: leftPanelOrder }}
                 onClick={toggleLeftSidebar}
                 title="Show Explorer"
               >
@@ -581,7 +593,7 @@ function ProjectDetailPageContent() {
             ) : (
               <LeftSidebar
                 className="flex-shrink-0"
-                style={{ width: sidebarWidth, order: leftOrder }}
+                style={{ width: sidebarWidth, order: leftPanelOrder }}
                 projectName={project.name}
                 projectId={project.id}
               />
@@ -593,7 +605,7 @@ function ProjectDetailPageContent() {
             <div
               onMouseDown={handleLeftResizeMouseDown}
               className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
-              style={{ order: leftOrder }}
+              style={{ order: leftHandleOrder }}
             />
           )}
 
@@ -601,7 +613,7 @@ function ProjectDetailPageContent() {
           <PanelErrorBoundary panelName="Main Content">
             <MainContent
               className="flex-1 min-w-0"
-              style={{ order: centerOrder }}
+              style={{ order: centerPanelOrder }}
               projectName={project.name}
               projectId={project.id}
               activeTab={activeTab}
@@ -615,7 +627,7 @@ function ProjectDetailPageContent() {
             <div
               onMouseDown={handleRightResizeMouseDown}
               className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
-              style={{ order: rightOrder }}
+              style={{ order: rightHandleOrder }}
             />
           )}
 
@@ -623,7 +635,7 @@ function ProjectDetailPageContent() {
           <PanelErrorBoundary panelName="History Panel">
             <RightSidebar
               className="flex-shrink-0"
-              style={{ order: rightOrder }}
+              style={{ order: rightPanelOrder }}
               projectId={project.id}
               selectedIngestionNumbers={selectedIngestionNumbers}
               onSelectIngestion={handleSelectIngestion}
