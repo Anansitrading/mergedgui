@@ -3,6 +3,7 @@ import { IngestionWizard } from '../../../../components/Hypervisa/IngestionWizar
 import { useIngestion, formatFileSizeFromBytes, SelectedFile } from '../../../../contexts/IngestionContext';
 import { addIngestionEntry } from '../../../../services/compressionService';
 import { IngestionConfig } from '../../../../types';
+import type { IngestionSourceType } from '../../../../types/contextInspector';
 import { X, Upload, FileText, GitBranch, AlignLeft, ArrowLeft } from 'lucide-react';
 
 type SourceView = 'picker' | 'repo' | 'text';
@@ -44,14 +45,19 @@ export function IngestionModal({ projectName, projectId }: IngestionModalProps) 
       // Simulate processing delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
+      // Derive source type from the file id prefix
+      let sourceType: IngestionSourceType = 'file';
+      if (selectedFile?.id.startsWith('repo-')) sourceType = 'repo';
+      else if (selectedFile?.id.startsWith('text-')) sourceType = 'text';
+
       // Add an ingestion entry to the right panel's ingestion history
-      await addIngestionEntry(projectId, 1, 0, config.displayName);
+      await addIngestionEntry(projectId, 1, 0, config.displayName, 0, sourceType);
 
       // Close the modal after successful ingestion
       resetSourceState();
       closeIngestionModal();
     },
-    [projectId, closeIngestionModal, resetSourceState]
+    [projectId, selectedFile, closeIngestionModal, resetSourceState]
   );
 
   const handleFileSelect = useCallback((files: FileList | null) => {

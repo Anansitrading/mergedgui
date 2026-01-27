@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus, FileUp, Tag, Archive, Shield } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus, FileUp, Tag, Archive, Shield, Eye } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
@@ -578,6 +578,11 @@ function IngestionEntryRow({ entry, isSelected, onSelect, onRename, onDelete, on
         {/* Never compress shield */}
         {!isRenaming && entry.neverCompress && (
           <Shield size={12} className="flex-shrink-0 text-amber-400" title="Never compress" />
+        )}
+
+        {/* Compressed eye */}
+        {!isRenaming && entry.compressed && !entry.neverCompress && (
+          <Eye size={12} className="flex-shrink-0 text-emerald-400" title="Compressed" />
         )}
 
         {/* Compact change indicator */}

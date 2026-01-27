@@ -88,6 +88,9 @@ export interface CompressionMetrics {
   avgInterval: number;
 }
 
+// Ingestion source types
+export type IngestionSourceType = 'file' | 'repo' | 'text';
+
 // Ingestion history entry
 export interface IngestionEntry {
   number: number;
@@ -99,6 +102,7 @@ export interface IngestionEntry {
   tags?: string[];
   compressed?: boolean;
   neverCompress?: boolean;
+  sourceType?: IngestionSourceType;
 }
 
 // Compression algorithm details

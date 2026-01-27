@@ -7,17 +7,32 @@ import {
   ChevronUp,
   Search,
   RefreshCw,
-  Package,
+  FileText,
+  GitBranch,
+  AlignLeft,
   Plus,
   Minus,
   Shield,
+  Eye,
   LayoutGrid,
   List,
 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { formatDateTime, formatFileChange } from '../../../../utils/formatting';
 import { useCompressionData } from '../CompressionTab/hooks';
-import type { IngestionEntry } from '../../../../types/contextInspector';
+import type { IngestionEntry, IngestionSourceType } from '../../../../types/contextInspector';
+
+function getSourceIcon(sourceType?: IngestionSourceType) {
+  switch (sourceType) {
+    case 'repo':
+      return { Icon: GitBranch, color: 'text-purple-400', bg: 'bg-purple-500/15', bgSelected: 'bg-purple-500/25' };
+    case 'text':
+      return { Icon: AlignLeft, color: 'text-emerald-400', bg: 'bg-emerald-500/15', bgSelected: 'bg-emerald-500/25' };
+    case 'file':
+    default:
+      return { Icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/15', bgSelected: 'bg-blue-500/25' };
+  }
+}
 
 interface KnowledgeBaseTabProps {
   contextId: string;
@@ -49,6 +64,7 @@ interface IngestionCardProps {
 }
 
 function IngestionCard({ entry, isSelected, cardRef }: IngestionCardProps) {
+  const { Icon, color, bg, bgSelected } = getSourceIcon(entry.sourceType);
   return (
     <div
       ref={cardRef}
@@ -63,9 +79,9 @@ function IngestionCard({ entry, isSelected, cardRef }: IngestionCardProps) {
         <div className="flex items-center gap-2.5">
           <div className={cn(
             "w-7 h-7 rounded-md flex items-center justify-center",
-            isSelected ? "bg-blue-500/25" : "bg-blue-500/15"
+            isSelected ? bgSelected : bg
           )}>
-            <Package size={14} className="text-blue-400" />
+            <Icon size={14} className={color} />
           </div>
           <div>
             <span className="text-sm font-semibold text-white font-mono">#{entry.number}</span>
@@ -76,6 +92,11 @@ function IngestionCard({ entry, isSelected, cardRef }: IngestionCardProps) {
           {entry.neverCompress && (
             <div className="w-5 h-5 rounded flex items-center justify-center bg-amber-500/15" title="Never compress">
               <Shield size={12} className="text-amber-400" />
+            </div>
+          )}
+          {entry.compressed && !entry.neverCompress && (
+            <div className="w-5 h-5 rounded flex items-center justify-center bg-emerald-500/15" title="Compressed">
+              <Eye size={12} className="text-emerald-400" />
             </div>
           )}
         </div>
@@ -103,49 +124,46 @@ function IngestionCard({ entry, isSelected, cardRef }: IngestionCardProps) {
 }
 
 function IngestionGridCard({ entry, isSelected, cardRef }: IngestionCardProps) {
+  const { Icon, color, bg, bgSelected } = getSourceIcon(entry.sourceType);
   return (
     <div
       ref={cardRef}
       className={cn(
-        "p-4 rounded-lg transition-colors border flex flex-col gap-2",
+        "aspect-square p-2.5 rounded-lg transition-colors border flex flex-col items-center justify-center text-center gap-1.5",
         isSelected
           ? "bg-blue-600/15 border-blue-500/40 ring-1 ring-blue-500/20"
           : "bg-slate-800/30 hover:bg-slate-800/50 border-white/5 hover:border-white/10"
       )}
     >
-      <div className="flex items-center gap-2.5">
-        <div className={cn(
-          "w-7 h-7 rounded-md flex items-center justify-center shrink-0",
-          isSelected ? "bg-blue-500/25" : "bg-blue-500/15"
-        )}>
-          <Package size={14} className="text-blue-400" />
-        </div>
-        <span className="text-sm font-semibold text-white font-mono">#{entry.number}</span>
+      <div className={cn(
+        "w-8 h-8 rounded-md flex items-center justify-center",
+        isSelected ? bgSelected : bg
+      )}>
+        <Icon size={16} className={color} />
+      </div>
+      <div className="flex items-center gap-1">
+        <span className="text-xs font-semibold text-white font-mono">#{entry.number}</span>
         {entry.neverCompress && (
-          <div className="w-5 h-5 rounded flex items-center justify-center bg-amber-500/15" title="Never compress">
-            <Shield size={12} className="text-amber-400" />
-          </div>
+          <Shield size={10} className="text-amber-400" />
+        )}
+        {entry.compressed && !entry.neverCompress && (
+          <Eye size={10} className="text-emerald-400" />
         )}
       </div>
       {entry.displayName && (
-        <p className="text-sm text-gray-300 truncate">{entry.displayName}</p>
+        <p className="text-[10px] text-gray-300 truncate w-full leading-tight">{entry.displayName}</p>
       )}
-      <span className="text-xs text-gray-500">{formatDateTime(entry.timestamp)}</span>
-      <div className="flex items-center gap-3 text-xs mt-auto">
+      <span className="text-[9px] text-gray-500 leading-tight">{formatDateTime(entry.timestamp)}</span>
+      <div className="flex items-center gap-2 text-[9px]">
         {entry.filesAdded > 0 && (
-          <span className="flex items-center gap-1 text-emerald-400">
-            <Plus size={11} />
-            {formatFileChange(entry.filesAdded, true)}
+          <span className="flex items-center gap-0.5 text-emerald-400">
+            <Plus size={8} />+{entry.filesAdded}
           </span>
         )}
         {entry.filesRemoved > 0 && (
-          <span className="flex items-center gap-1 text-red-400">
-            <Minus size={11} />
-            {formatFileChange(entry.filesRemoved, false)}
+          <span className="flex items-center gap-0.5 text-red-400">
+            <Minus size={8} />-{entry.filesRemoved}
           </span>
-        )}
-        {entry.filesAdded === 0 && entry.filesRemoved === 0 && (
-          <span className="text-gray-500">No changes</span>
         )}
       </div>
     </div>
@@ -312,30 +330,61 @@ export function KnowledgeBaseTab({ contextId, selectedIngestionNumbers = [] }: K
           <span className="ml-auto text-[11px] text-gray-600">
             {filteredIngestions.length} of {history.length} ingestions
           </span>
+          <div className="flex items-center gap-0.5 ml-2">
+            <button
+              onClick={() => setViewMode('list')}
+              className={cn(
+                'p-1 rounded transition-colors',
+                viewMode === 'list'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              )}
+              title="List view"
+              aria-label="List view"
+            >
+              <List size={14} />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={cn(
+                'p-1 rounded transition-colors',
+                viewMode === 'grid'
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              )}
+              title="Grid view"
+              aria-label="Grid view"
+            >
+              <LayoutGrid size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Ingestion List */}
+      {/* Ingestion List / Grid */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-3">
-        <div className="space-y-2">
-          {filteredIngestions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Clock className="w-8 h-8 text-gray-600 mb-2" />
-              <p className="text-sm text-gray-500">
-                {searchQuery ? 'No ingestions match your search' : 'No ingestions yet'}
-              </p>
-            </div>
-          ) : (
-            filteredIngestions.map((entry) => (
-              <IngestionCard
-                key={entry.number}
-                entry={entry}
-                isSelected={selectedSet.has(entry.number)}
-                cardRef={selectedIngestionNumbers.length === 1 && selectedIngestionNumbers[0] === entry.number ? selectedCardRef : undefined}
-              />
-            ))
-          )}
-        </div>
+        {filteredIngestions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Clock className="w-8 h-8 text-gray-600 mb-2" />
+            <p className="text-sm text-gray-500">
+              {searchQuery ? 'No ingestions match your search' : 'No ingestions yet'}
+            </p>
+          </div>
+        ) : (
+          <div className={viewMode === 'grid' ? 'grid grid-cols-3 gap-2' : 'space-y-2'}>
+            {filteredIngestions.map((entry) => {
+              const cardProps = {
+                key: entry.number,
+                entry,
+                isSelected: selectedSet.has(entry.number),
+                cardRef: selectedIngestionNumbers.length === 1 && selectedIngestionNumbers[0] === entry.number ? selectedCardRef : undefined,
+              };
+              return viewMode === 'grid'
+                ? <IngestionGridCard {...cardProps} />
+                : <IngestionCard {...cardProps} />;
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
