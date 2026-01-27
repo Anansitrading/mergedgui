@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus, FileUp, Tag, Archive, Shield, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus, FileText, GitBranch, AlignLeft, Tag, Archive, Shield, Eye } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
@@ -7,7 +7,19 @@ import { useCompressionData } from '../../../../components/ContextDetailInspecto
 import { formatRelativeTime } from '../../../../utils/chatHistoryStorage';
 import { formatDateTime, formatFileChange } from '../../../../utils/formatting';
 import type { ChatHistoryItem } from '../../../../types/chatHistory';
-import type { IngestionEntry } from '../../../../types/contextInspector';
+import type { IngestionEntry, IngestionSourceType } from '../../../../types/contextInspector';
+
+function getSourceIcon(sourceType?: IngestionSourceType) {
+  switch (sourceType) {
+    case 'repo':
+      return { Icon: GitBranch, color: 'text-purple-400' };
+    case 'text':
+      return { Icon: AlignLeft, color: 'text-emerald-400' };
+    case 'file':
+    default:
+      return { Icon: FileText, color: 'text-blue-400' };
+  }
+}
 
 // ==========================================
 // Constants
@@ -440,6 +452,7 @@ interface IngestionEntryRowProps {
 }
 
 function IngestionEntryRow({ entry, isSelected, onSelect, onRename, onDelete, onUpdateTags, onCompress }: IngestionEntryRowProps) {
+  const { Icon: SourceIcon, color: sourceColor } = getSourceIcon(entry.sourceType);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
@@ -556,10 +569,10 @@ function IngestionEntryRow({ entry, isSelected, onSelect, onRename, onDelete, on
           }
         }}
       >
-        {/* Icon */}
-        <FileUp size={14} className={cn(
+        {/* Source type icon */}
+        <SourceIcon size={14} className={cn(
           "flex-shrink-0",
-          isSelected ? "text-blue-400" : "text-slate-500"
+          isSelected ? sourceColor : "text-slate-500"
         )} />
 
         {/* Name or inline rename */}

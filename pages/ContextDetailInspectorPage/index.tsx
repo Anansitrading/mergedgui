@@ -16,18 +16,57 @@ import { SettingsModal } from '../../components/SettingsModal';
 import { ShareModal } from '../../components/ContextDetailInspector/modals/ShareModal';
 import { KnowledgeGraphFloatingWindow } from '../../components/ContextDetailInspector/modals/KnowledgeGraphFloatingWindow';
 import { useNotifications } from '../../hooks/useNotifications';
-import { useProjects } from '../../contexts/ProjectsContext';
+import type { WorkspaceWithBranches } from '../../types';
 import { useChatHistory } from '../../contexts/ChatHistoryContext';
 import { LayoutProvider, useLayout } from '../../contexts/LayoutContext';
 import { HeaderLayoutControls } from '../../components/HeaderLayoutControls';
 import { cn } from '../../utils/cn';
 import { tabConfig } from '../../styles/contextInspector';
-import { Loader2, AlertCircle, Share2, ArrowLeft, Wrench, ChevronDown, Check } from 'lucide-react';
+import { Loader2, AlertCircle, Share2, ArrowLeft, Wrench, ChevronDown, Check, GitBranch, FolderOpen } from 'lucide-react';
 import type { TabType } from '../../types/contextInspector';
 import type { Notification, SettingsSection } from '../../types/settings';
 
 // Valid tab values
 const VALID_TABS: TabType[] = ['overview', 'knowledgebase', 'compression', 'knowledgegraph'];
+
+// Mock workspace data
+const MOCK_WORKSPACES: WorkspaceWithBranches[] = [
+  {
+    id: 'ws-1',
+    name: 'main',
+    path: '/main',
+    isActive: true,
+    currentBranch: 'develop',
+    branches: [
+      { name: 'main', isDefault: true, isCurrent: false, lastCommit: '3h ago' },
+      { name: 'develop', isDefault: false, isCurrent: true, lastCommit: '25m ago' },
+      { name: 'feature/auth', isDefault: false, isCurrent: false, lastCommit: '2d ago' },
+    ],
+  },
+  {
+    id: 'ws-2',
+    name: 'feature/new-ui',
+    path: '/feature-new-ui',
+    isActive: false,
+    currentBranch: 'feature/new-ui',
+    branches: [
+      { name: 'main', isDefault: true, isCurrent: false, lastCommit: '3h ago' },
+      { name: 'feature/new-ui', isDefault: false, isCurrent: true, lastCommit: '1h ago' },
+      { name: 'hotfix/css', isDefault: false, isCurrent: false, lastCommit: '5h ago' },
+    ],
+  },
+  {
+    id: 'ws-3',
+    name: 'bugfix/api-timeout',
+    path: '/bugfix-api-timeout',
+    isActive: false,
+    currentBranch: 'bugfix/api-timeout',
+    branches: [
+      { name: 'main', isDefault: true, isCurrent: false, lastCommit: '3h ago' },
+      { name: 'bugfix/api-timeout', isDefault: false, isCurrent: true, lastCommit: '45m ago' },
+    ],
+  },
+];
 
 function ProjectDetailPageContent() {
   const navigate = useNavigate();
@@ -71,10 +110,11 @@ function ProjectDetailPageContent() {
   // User dropdown state
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
-  // Project switcher dropdown
-  const [isProjectSwitcherOpen, setIsProjectSwitcherOpen] = useState(false);
-  const projectSwitcherRef = useRef<HTMLDivElement>(null);
-  const { projects } = useProjects();
+  // Workspace/branch selector
+  const [isWorkspaceSwitcherOpen, setIsWorkspaceSwitcherOpen] = useState(false);
+  const workspaceSwitcherRef = useRef<HTMLDivElement>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceWithBranches>(MOCK_WORKSPACES[0]);
+  const [selectedBranch, setSelectedBranch] = useState(MOCK_WORKSPACES[0].currentBranch);
 
   // Left sidebar resizing (delta-based for panel reorder support)
   const [sidebarWidth, setSidebarWidth] = useState(240);
@@ -181,17 +221,17 @@ function ProjectDetailPageContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleTabChange]);
 
-  // Close project switcher on outside click
+  // Close workspace switcher on outside click
   useEffect(() => {
-    if (!isProjectSwitcherOpen) return;
+    if (!isWorkspaceSwitcherOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (projectSwitcherRef.current && !projectSwitcherRef.current.contains(e.target as Node)) {
-        setIsProjectSwitcherOpen(false);
+      if (workspaceSwitcherRef.current && !workspaceSwitcherRef.current.contains(e.target as Node)) {
+        setIsWorkspaceSwitcherOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isProjectSwitcherOpen]);
+  }, [isWorkspaceSwitcherOpen]);
 
   // Check for openIngestion param and trigger modal
   const openIngestionParam = searchParams.get('openIngestion');
@@ -314,70 +354,121 @@ function ProjectDetailPageContent() {
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {/* Project switcher dropdown */}
-            <div ref={projectSwitcherRef} className="relative min-w-0">
-                <button
-                  onClick={() => setIsProjectSwitcherOpen(!isProjectSwitcherOpen)}
-                  className={cn(
-                    'flex items-center gap-2 w-full px-1.5 py-1 rounded-lg transition-colors duration-150',
-                    'hover:bg-white/10',
-                    isProjectSwitcherOpen && 'bg-white/10'
-                  )}
-                >
-                  <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                    <Wrench className="w-3.5 h-3.5 text-blue-400" />
-                  </div>
-                  <span className="text-sm font-semibold text-white truncate">
-                    {project.name}
-                  </span>
-                  <ChevronDown className={cn(
-                    'w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150',
-                    isProjectSwitcherOpen && 'rotate-180'
-                  )} />
-                </button>
+            {/* Project name (static) */}
+            <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
+              <Wrench className="w-3.5 h-3.5 text-blue-400" />
+            </div>
+            <span className="text-sm font-semibold text-white truncate">
+              {project.name}
+            </span>
 
-                {isProjectSwitcherOpen && (
-                  <div className="absolute top-full left-0 mt-1 w-72 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1 max-h-80 overflow-y-auto">
-                    {projects.map((p) => (
-                      <button
-                        key={p.id}
-                        onClick={() => {
-                          if (p.id !== project.id) {
-                            navigate(`/project/${p.id}`);
-                          }
-                          setIsProjectSwitcherOpen(false);
-                        }}
-                        className={cn(
-                          'flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors duration-100',
-                          p.id === project.id
-                            ? 'bg-blue-500/10 text-white'
-                            : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                        )}
-                      >
-                        <div
-                          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs"
-                          style={{ backgroundColor: `${p.icon.backgroundColor}30` }}
-                        >
-                          {p.icon.type === 'emoji' ? (
-                            <span>{p.icon.value}</span>
-                          ) : (
-                            <span className="text-[10px] font-bold" style={{ color: p.icon.backgroundColor }}>
-                              {p.icon.value}
-                            </span>
+            <span className="text-gray-600 mx-1">/</span>
+
+            {/* Workspace + Branch selector dropdown */}
+            <div ref={workspaceSwitcherRef} className="relative min-w-0">
+              <button
+                onClick={() => setIsWorkspaceSwitcherOpen(!isWorkspaceSwitcherOpen)}
+                className={cn(
+                  'flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors duration-150',
+                  'hover:bg-white/10',
+                  isWorkspaceSwitcherOpen && 'bg-white/10'
+                )}
+              >
+                <FolderOpen className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                <span className="text-sm text-gray-300 truncate max-w-[120px]">
+                  {selectedWorkspace.name}
+                </span>
+                <span className="text-gray-600 mx-0.5">·</span>
+                <GitBranch className="w-3 h-3 text-orange-400 flex-shrink-0" />
+                <span className="text-sm text-gray-300 truncate max-w-[120px]">
+                  {selectedBranch}
+                </span>
+                <ChevronDown className={cn(
+                  'w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150',
+                  isWorkspaceSwitcherOpen && 'rotate-180'
+                )} />
+              </button>
+
+              {isWorkspaceSwitcherOpen && (
+                <div className="absolute top-full left-0 mt-1 w-80 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1 max-h-96 overflow-y-auto">
+                  {/* Workspaces section */}
+                  <div className="px-3 py-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Workspaces</span>
+                  </div>
+                  {MOCK_WORKSPACES.map((ws) => (
+                    <button
+                      key={ws.id}
+                      onClick={() => {
+                        setSelectedWorkspace(ws);
+                        setSelectedBranch(ws.currentBranch);
+                      }}
+                      className={cn(
+                        'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
+                        ws.id === selectedWorkspace.id
+                          ? 'bg-emerald-500/10 text-white'
+                          : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                      )}
+                    >
+                      <FolderOpen className={cn(
+                        'w-4 h-4 flex-shrink-0',
+                        ws.id === selectedWorkspace.id ? 'text-emerald-400' : 'text-gray-500'
+                      )} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{ws.name}</div>
+                        <div className="text-[11px] text-gray-500">{ws.path}</div>
+                      </div>
+                      {ws.id === selectedWorkspace.id && (
+                        <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+
+                  {/* Divider */}
+                  <div className="border-t border-[#1e293b] my-1" />
+
+                  {/* Branches section */}
+                  <div className="px-3 py-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                      Branches — {selectedWorkspace.name}
+                    </span>
+                  </div>
+                  {selectedWorkspace.branches.map((branch) => (
+                    <button
+                      key={branch.name}
+                      onClick={() => {
+                        setSelectedBranch(branch.name);
+                        setIsWorkspaceSwitcherOpen(false);
+                      }}
+                      className={cn(
+                        'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
+                        branch.name === selectedBranch
+                          ? 'bg-orange-500/10 text-white'
+                          : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                      )}
+                    >
+                      <GitBranch className={cn(
+                        'w-4 h-4 flex-shrink-0',
+                        branch.name === selectedBranch ? 'text-orange-400' : 'text-gray-500'
+                      )} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {branch.name}
+                          {branch.isDefault && (
+                            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">default</span>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{p.name}</div>
-                          <div className="text-[11px] text-gray-500">{p.sourceCount} sources</div>
-                        </div>
-                        {p.id === project.id && (
-                          <Check className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        {branch.lastCommit && (
+                          <div className="text-[11px] text-gray-500">{branch.lastCommit}</div>
                         )}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                      </div>
+                      {branch.name === selectedBranch && (
+                        <Check className="w-4 h-4 text-orange-400 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Center + Right section - Tabs + Layout Controls + Share + Live + Bell + Avatar */}

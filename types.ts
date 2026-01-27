@@ -141,3 +141,23 @@ export interface CheckNameResponse {
     exists: boolean;
     suggestion?: string;
 }
+
+// Workspace & Branch Types (worktree selector)
+export interface Workspace {
+    id: string;
+    name: string;
+    path: string;
+    isActive: boolean;
+}
+
+export interface Branch {
+    name: string;
+    isDefault: boolean;
+    isCurrent: boolean;
+    lastCommit?: string;
+}
+
+export interface WorkspaceWithBranches extends Workspace {
+    branches: Branch[];
+    currentBranch: string;
+}
