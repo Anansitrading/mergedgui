@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { LeftSidebar } from './components/LeftSidebar';
 import { MainContent } from './components/MainContent';
 import { RightSidebar } from './components/RightSidebar';
+import { ChatHistoryPanel } from './components/ChatHistoryPanel';
 import { IngestionModal } from './components/IngestionModal';
 import { useProjectData } from '../../hooks/useProjectData';
 import { useIngestion, formatFileSizeFromBytes } from '../../contexts/IngestionContext';
@@ -16,7 +17,7 @@ import { SettingsModal } from '../../components/SettingsModal';
 import { ShareModal } from '../../components/ContextDetailInspector/modals/ShareModal';
 import { KnowledgeGraphFloatingWindow } from '../../components/ContextDetailInspector/modals/KnowledgeGraphFloatingWindow';
 import { useNotifications } from '../../hooks/useNotifications';
-import type { WorkspaceWithBranches } from '../../types';
+import type { WorktreeWithBranches } from '../../types';
 import { useChatHistory } from '../../contexts/ChatHistoryContext';
 import { LayoutProvider, useLayout } from '../../contexts/LayoutContext';
 import { HeaderLayoutControls } from '../../components/HeaderLayoutControls';
@@ -29,8 +30,8 @@ import type { Notification, SettingsSection } from '../../types/settings';
 // Valid tab values
 const VALID_TABS: TabType[] = ['overview', 'knowledgebase', 'knowledgegraph'];
 
-// Mock workspace data
-const MOCK_WORKSPACES: WorkspaceWithBranches[] = [
+// Mock worktree data
+const MOCK_WORKTREES: WorktreeWithBranches[] = [
   {
     id: 'ws-1',
     name: 'main',
@@ -110,11 +111,11 @@ function ProjectDetailPageContent() {
   // User dropdown state
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
-  // Workspace/branch selector
-  const [isWorkspaceSwitcherOpen, setIsWorkspaceSwitcherOpen] = useState(false);
-  const workspaceSwitcherRef = useRef<HTMLDivElement>(null);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<WorkspaceWithBranches>(MOCK_WORKSPACES[0]);
-  const [selectedBranch, setSelectedBranch] = useState(MOCK_WORKSPACES[0].currentBranch);
+  // Worktree/branch selector
+  const [isWorktreeSwitcherOpen, setIsWorktreeSwitcherOpen] = useState(false);
+  const worktreeSwitcherRef = useRef<HTMLDivElement>(null);
+  const [selectedWorktree, setSelectedWorktree] = useState<WorktreeWithBranches>(MOCK_WORKTREES[0]);
+  const [selectedBranch, setSelectedBranch] = useState(MOCK_WORKTREES[0].currentBranch);
 
   // Left sidebar resizing (delta-based for panel reorder support)
   const [sidebarWidth, setSidebarWidth] = useState(240);
@@ -224,17 +225,17 @@ function ProjectDetailPageContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleTabChange]);
 
-  // Close workspace switcher on outside click
+  // Close worktree switcher on outside click
   useEffect(() => {
-    if (!isWorkspaceSwitcherOpen) return;
+    if (!isWorktreeSwitcherOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (workspaceSwitcherRef.current && !workspaceSwitcherRef.current.contains(e.target as Node)) {
-        setIsWorkspaceSwitcherOpen(false);
+      if (worktreeSwitcherRef.current && !worktreeSwitcherRef.current.contains(e.target as Node)) {
+        setIsWorktreeSwitcherOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isWorkspaceSwitcherOpen]);
+  }, [isWorktreeSwitcherOpen]);
 
   // Check for openIngestion param and trigger modal
   const openIngestionParam = searchParams.get('openIngestion');
@@ -296,18 +297,15 @@ function ProjectDetailPageContent() {
     handleTabChange('overview');
   }, [createNewChat, addMessage, handleTabChange]);
 
-  // Panel order indices (use 0-4 scale so resize handles fit between panels)
+  // Panel position indices for resize handle gap placement
   const leftIdx = layoutState.panelOrder.indexOf('left');
   const centerIdx = layoutState.panelOrder.indexOf('center');
   const rightIdx = layoutState.panelOrder.indexOf('right');
 
-  const leftPanelOrder = leftIdx * 2;
-  const centerPanelOrder = centerIdx * 2;
-  const rightPanelOrder = rightIdx * 2;
-
-  // Resize handle order: between its panel and the center panel
-  const leftHandleOrder = leftIdx < centerIdx ? leftIdx * 2 + 1 : leftIdx * 2 - 1;
-  const rightHandleOrder = rightIdx < centerIdx ? rightIdx * 2 + 1 : rightIdx * 2 - 1;
+  // Each sidebar's resize handle goes in the gap facing center
+  // Gap 0 = between position 0 and 1, Gap 1 = between position 1 and 2
+  const leftHandleGap = leftIdx < centerIdx ? leftIdx : leftIdx - 1;
+  const rightHandleGap = rightIdx < centerIdx ? rightIdx : rightIdx - 1;
 
   // Loading state
   if (isLoading) {
@@ -346,9 +344,6 @@ function ProjectDetailPageContent() {
     );
   }
 
-  // Resolved widths based on collapse state
-  const leftWidth = layoutState.leftSidebarCollapsed ? 48 : sidebarWidth;
-
   // Main layout
   return (
     <>
@@ -366,14 +361,14 @@ function ProjectDetailPageContent() {
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {/* Project name + Workspace/Branch selector dropdown */}
-            <div ref={workspaceSwitcherRef} className="relative min-w-0">
+            {/* Project name + Worktree/Branch selector dropdown */}
+            <div ref={worktreeSwitcherRef} className="relative min-w-0">
               <button
-                onClick={() => setIsWorkspaceSwitcherOpen(!isWorkspaceSwitcherOpen)}
+                onClick={() => setIsWorktreeSwitcherOpen(!isWorktreeSwitcherOpen)}
                 className={cn(
                   'flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-colors duration-150',
                   'hover:bg-white/10',
-                  isWorkspaceSwitcherOpen && 'bg-white/10'
+                  isWorktreeSwitcherOpen && 'bg-white/10'
                 )}
               >
                 <span className="text-sm font-medium text-gray-300 truncate max-w-[140px]">
@@ -381,39 +376,39 @@ function ProjectDetailPageContent() {
                 </span>
                 <ChevronDown className={cn(
                   'w-3 h-3 text-gray-500 flex-shrink-0 transition-transform duration-150',
-                  isWorkspaceSwitcherOpen && 'rotate-180'
+                  isWorktreeSwitcherOpen && 'rotate-180'
                 )} />
               </button>
 
-              {isWorkspaceSwitcherOpen && (
+              {isWorktreeSwitcherOpen && (
                 <div className="absolute top-full left-0 mt-1 w-80 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1 max-h-96 overflow-y-auto">
-                  {/* Workspaces section */}
+                  {/* Worktrees section */}
                   <div className="px-3 py-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Workspaces</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Worktrees</span>
                   </div>
-                  {MOCK_WORKSPACES.map((ws) => (
+                  {MOCK_WORKTREES.map((ws) => (
                     <button
                       key={ws.id}
                       onClick={() => {
-                        setSelectedWorkspace(ws);
+                        setSelectedWorktree(ws);
                         setSelectedBranch(ws.currentBranch);
                       }}
                       className={cn(
                         'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
-                        ws.id === selectedWorkspace.id
+                        ws.id === selectedWorktree.id
                           ? 'bg-emerald-500/10 text-white'
                           : 'text-gray-300 hover:bg-white/5 hover:text-white'
                       )}
                     >
                       <FolderOpen className={cn(
                         'w-4 h-4 flex-shrink-0',
-                        ws.id === selectedWorkspace.id ? 'text-emerald-400' : 'text-gray-500'
+                        ws.id === selectedWorktree.id ? 'text-emerald-400' : 'text-gray-500'
                       )} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{ws.name}</div>
                         <div className="text-[11px] text-gray-500">{ws.path}</div>
                       </div>
-                      {ws.id === selectedWorkspace.id && (
+                      {ws.id === selectedWorktree.id && (
                         <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                       )}
                     </button>
@@ -425,15 +420,15 @@ function ProjectDetailPageContent() {
                   {/* Branches section */}
                   <div className="px-3 py-1.5">
                     <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                      Branches — {selectedWorkspace.name}
+                      Branches — {selectedWorktree.name}
                     </span>
                   </div>
-                  {selectedWorkspace.branches.map((branch) => (
+                  {selectedWorktree.branches.map((branch) => (
                     <button
                       key={branch.name}
                       onClick={() => {
                         setSelectedBranch(branch.name);
-                        setIsWorkspaceSwitcherOpen(false);
+                        setIsWorktreeSwitcherOpen(false);
                       }}
                       className={cn(
                         'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
@@ -572,78 +567,219 @@ function ProjectDetailPageContent() {
           </div>
         </header>
 
-        {/* Three columns below the top bar */}
+        {/* Three columns below the top bar - rendered in panelOrder for correct DOM order */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Sidebar - Source Files */}
-          <PanelErrorBoundary panelName="Source Files">
-            {layoutState.leftSidebarCollapsed ? (
-              <aside
-                className="flex-shrink-0 h-full bg-[#0d1220] border-r border-[#1e293b] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
-                style={{ width: 48, order: leftPanelOrder }}
-                onClick={toggleLeftSidebar}
-                title="Show Explorer"
-              >
-                <span
-                  className="text-[11px] font-medium text-gray-500 select-none"
-                  style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+          {/* Position 0 */}
+          {layoutState.panelOrder[0] === 'left' && (
+            <PanelErrorBoundary key="left-panel" panelName="Source Files">
+              {layoutState.leftSidebarCollapsed ? (
+                <aside
+                  className="flex-shrink-0 h-full bg-[#0d1220] border-r border-[#1e293b] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
+                  style={{ width: 48 }}
+                  onClick={toggleLeftSidebar}
+                  title="Show Explorer"
                 >
-                  Explorer
-                </span>
-              </aside>
-            ) : (
-              <LeftSidebar
-                className="flex-shrink-0"
-                style={{ width: sidebarWidth, order: leftPanelOrder }}
+                  <span
+                    className="text-[11px] font-medium text-gray-500 select-none"
+                    style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                  >
+                    Explorer
+                  </span>
+                </aside>
+              ) : (
+                <LeftSidebar
+                  className="flex-shrink-0"
+                  style={{ width: sidebarWidth }}
+                  projectName={project.name}
+                  projectId={project.id}
+                />
+              )}
+            </PanelErrorBoundary>
+          )}
+          {layoutState.panelOrder[0] === 'center' && (
+            <PanelErrorBoundary key="center-panel" panelName="Main Content">
+              <MainContent
+                className="flex-1 min-w-0"
                 projectName={project.name}
                 projectId={project.id}
+                activeTab={activeTab}
+                selectedIngestionNumbers={selectedIngestionNumbers}
+                onViewFullGraph={handleViewFullGraph}
               />
-            )}
-          </PanelErrorBoundary>
+            </PanelErrorBoundary>
+          )}
+          {layoutState.panelOrder[0] === 'right' && (
+            <PanelErrorBoundary key="right-panel" panelName="Right Panel">
+              {layoutState.rightSidebarTab === 'chats' ? (
+                <ChatHistoryPanel
+                  className="flex-shrink-0"
+                  expandedWidth={rightSidebarWidth}
+                />
+              ) : (
+                <RightSidebar
+                  className="flex-shrink-0"
+                  projectId={project.id}
+                  selectedIngestionNumbers={selectedIngestionNumbers}
+                  onSelectIngestion={handleSelectIngestion}
+                  collapsed={layoutState.rightSidebarCollapsed}
+                  onToggleCollapse={toggleRightSidebar}
+                  expandedWidth={rightSidebarWidth}
+                />
+              )}
+            </PanelErrorBoundary>
+          )}
 
-          {/* Left Resize Handle - hidden when left sidebar collapsed */}
-          {!layoutState.leftSidebarCollapsed && (
+          {/* Gap 0 resize handle */}
+          {leftHandleGap === 0 && !layoutState.leftSidebarCollapsed && (
             <div
+              key="left-handle"
               onMouseDown={handleLeftResizeMouseDown}
               className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
-              style={{ order: leftHandleOrder }}
             />
           )}
-
-          {/* Main Content */}
-          <PanelErrorBoundary panelName="Main Content">
-            <MainContent
-              className="flex-1 min-w-0"
-              style={{ order: centerPanelOrder }}
-              projectName={project.name}
-              projectId={project.id}
-              activeTab={activeTab}
-              selectedIngestionNumbers={selectedIngestionNumbers}
-              onViewFullGraph={handleViewFullGraph}
-            />
-          </PanelErrorBoundary>
-
-          {/* Right Resize Handle - hidden when right sidebar collapsed */}
-          {!layoutState.rightSidebarCollapsed && (
+          {rightHandleGap === 0 && !layoutState.rightSidebarCollapsed && (
             <div
+              key="right-handle"
               onMouseDown={handleRightResizeMouseDown}
               className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
-              style={{ order: rightHandleOrder }}
             />
           )}
 
-          {/* Right Sidebar - Chat History & Ingestion History */}
-          <PanelErrorBoundary panelName="History Panel">
-            <RightSidebar
-              className="flex-shrink-0"
-              style={{ order: rightPanelOrder }}
-              projectId={project.id}
-              selectedIngestionNumbers={selectedIngestionNumbers}
-              onSelectIngestion={handleSelectIngestion}
-              collapsed={layoutState.rightSidebarCollapsed}
-              onToggleCollapse={toggleRightSidebar}
-              expandedWidth={rightSidebarWidth}
+          {/* Position 1 */}
+          {layoutState.panelOrder[1] === 'left' && (
+            <PanelErrorBoundary key="left-panel" panelName="Source Files">
+              {layoutState.leftSidebarCollapsed ? (
+                <aside
+                  className="flex-shrink-0 h-full bg-[#0d1220] border-r border-[#1e293b] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
+                  style={{ width: 48 }}
+                  onClick={toggleLeftSidebar}
+                  title="Show Explorer"
+                >
+                  <span
+                    className="text-[11px] font-medium text-gray-500 select-none"
+                    style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                  >
+                    Explorer
+                  </span>
+                </aside>
+              ) : (
+                <LeftSidebar
+                  className="flex-shrink-0"
+                  style={{ width: sidebarWidth }}
+                  projectName={project.name}
+                  projectId={project.id}
+                />
+              )}
+            </PanelErrorBoundary>
+          )}
+          {layoutState.panelOrder[1] === 'center' && (
+            <PanelErrorBoundary key="center-panel" panelName="Main Content">
+              <MainContent
+                className="flex-1 min-w-0"
+                projectName={project.name}
+                projectId={project.id}
+                activeTab={activeTab}
+                selectedIngestionNumbers={selectedIngestionNumbers}
+                onViewFullGraph={handleViewFullGraph}
+              />
+            </PanelErrorBoundary>
+          )}
+          {layoutState.panelOrder[1] === 'right' && (
+            <PanelErrorBoundary key="right-panel" panelName="Right Panel">
+              {layoutState.rightSidebarTab === 'chats' ? (
+                <ChatHistoryPanel
+                  className="flex-shrink-0"
+                  expandedWidth={rightSidebarWidth}
+                />
+              ) : (
+                <RightSidebar
+                  className="flex-shrink-0"
+                  projectId={project.id}
+                  selectedIngestionNumbers={selectedIngestionNumbers}
+                  onSelectIngestion={handleSelectIngestion}
+                  collapsed={layoutState.rightSidebarCollapsed}
+                  onToggleCollapse={toggleRightSidebar}
+                  expandedWidth={rightSidebarWidth}
+                />
+              )}
+            </PanelErrorBoundary>
+          )}
+
+          {/* Gap 1 resize handle */}
+          {leftHandleGap === 1 && !layoutState.leftSidebarCollapsed && (
+            <div
+              key="left-handle"
+              onMouseDown={handleLeftResizeMouseDown}
+              className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
             />
-          </PanelErrorBoundary>
+          )}
+          {rightHandleGap === 1 && !layoutState.rightSidebarCollapsed && (
+            <div
+              key="right-handle"
+              onMouseDown={handleRightResizeMouseDown}
+              className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
+            />
+          )}
+
+          {/* Position 2 */}
+          {layoutState.panelOrder[2] === 'left' && (
+            <PanelErrorBoundary key="left-panel" panelName="Source Files">
+              {layoutState.leftSidebarCollapsed ? (
+                <aside
+                  className="flex-shrink-0 h-full bg-[#0d1220] border-r border-[#1e293b] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
+                  style={{ width: 48 }}
+                  onClick={toggleLeftSidebar}
+                  title="Show Explorer"
+                >
+                  <span
+                    className="text-[11px] font-medium text-gray-500 select-none"
+                    style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                  >
+                    Explorer
+                  </span>
+                </aside>
+              ) : (
+                <LeftSidebar
+                  className="flex-shrink-0"
+                  style={{ width: sidebarWidth }}
+                  projectName={project.name}
+                  projectId={project.id}
+                />
+              )}
+            </PanelErrorBoundary>
+          )}
+          {layoutState.panelOrder[2] === 'center' && (
+            <PanelErrorBoundary key="center-panel" panelName="Main Content">
+              <MainContent
+                className="flex-1 min-w-0"
+                projectName={project.name}
+                projectId={project.id}
+                activeTab={activeTab}
+                selectedIngestionNumbers={selectedIngestionNumbers}
+                onViewFullGraph={handleViewFullGraph}
+              />
+            </PanelErrorBoundary>
+          )}
+          {layoutState.panelOrder[2] === 'right' && (
+            <PanelErrorBoundary key="right-panel" panelName="Right Panel">
+              {layoutState.rightSidebarTab === 'chats' ? (
+                <ChatHistoryPanel
+                  className="flex-shrink-0"
+                  expandedWidth={rightSidebarWidth}
+                />
+              ) : (
+                <RightSidebar
+                  className="flex-shrink-0"
+                  projectId={project.id}
+                  selectedIngestionNumbers={selectedIngestionNumbers}
+                  onSelectIngestion={handleSelectIngestion}
+                  collapsed={layoutState.rightSidebarCollapsed}
+                  onToggleCollapse={toggleRightSidebar}
+                  expandedWidth={rightSidebarWidth}
+                />
+              )}
+            </PanelErrorBoundary>
+          )}
         </div>
       </div>
 

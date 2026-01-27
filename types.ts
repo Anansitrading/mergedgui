@@ -203,8 +203,8 @@ export interface CheckNameResponse {
     suggestion?: string;
 }
 
-// Workspace & Branch Types (worktree selector)
-export interface Workspace {
+// Worktree & Branch Types (worktree selector)
+export interface Worktree {
     id: string;
     name: string;
     path: string;
@@ -218,7 +218,7 @@ export interface Branch {
     lastCommit?: string;
 }
 
-export interface WorkspaceWithBranches extends Workspace {
+export interface WorktreeWithBranches extends Worktree {
     branches: Branch[];
     currentBranch: string;
 }
