@@ -1,12 +1,11 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus, FileUp, Tag } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
 import { useCompressionData } from '../../../../components/ContextDetailInspector/tabs/CompressionTab/hooks';
-import { useSourceFiles, formatFileSize } from '../../../../contexts/SourceFilesContext';
 import { formatRelativeTime } from '../../../../utils/chatHistoryStorage';
-import { formatDateTime, formatFileChange, formatInterval } from '../../../../utils/formatting';
+import { formatDateTime, formatFileChange } from '../../../../utils/formatting';
 import type { ChatHistoryItem } from '../../../../types/chatHistory';
 import type { IngestionEntry } from '../../../../types/contextInspector';
 
@@ -83,18 +82,19 @@ function useDebounce<T>(value: T, delay: number): T {
 interface DeleteConfirmDialogProps {
   isOpen: boolean;
   title: string;
+  heading?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-function DeleteConfirmDialog({ isOpen, title, onConfirm, onCancel }: DeleteConfirmDialogProps) {
+function DeleteConfirmDialog({ isOpen, title, heading = 'Delete Chat', onConfirm, onCancel }: DeleteConfirmDialogProps) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-card border border-white/20 rounded-lg shadow-xl p-4 max-w-sm mx-4 animate-in fade-in zoom-in-95 duration-200">
-        <h3 className="text-sm font-semibold text-white mb-2">Delete Chat</h3>
+        <h3 className="text-sm font-semibold text-white mb-2">{heading}</h3>
         <p className="text-xs text-gray-400 mb-4">
           Are you sure you want to delete "{title}"? This action cannot be undone.
         </p>
@@ -154,6 +154,140 @@ function InlineEdit({ value, onSave, onCancel }: InlineEditProps) {
       onBlur={() => onSave(editValue.trim() || value)}
       className="w-full bg-white/10 border border-blue-500/50 rounded px-2 py-0.5 text-xs font-medium text-white outline-none focus:border-blue-500"
     />
+  );
+}
+
+// ==========================================
+// Ingestion Context Menu
+// ==========================================
+
+type IngestionMenuAction = 'rename' | 'edit-tags' | 'delete';
+
+interface IngestionContextMenuProps {
+  x: number;
+  y: number;
+  onAction: (action: IngestionMenuAction) => void;
+  onClose: () => void;
+}
+
+function IngestionContextMenu({ x, y, onAction, onClose }: IngestionContextMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (menuRef.current) {
+      const rect = menuRef.current.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        menuRef.current.style.left = `${x - rect.width}px`;
+      }
+      if (rect.bottom > window.innerHeight) {
+        menuRef.current.style.top = `${y - rect.height}px`;
+      }
+    }
+  }, [x, y]);
+
+  const actions: Array<{ id: IngestionMenuAction; label: string; icon: typeof Pencil; danger?: boolean }> = [
+    { id: 'rename', label: 'Rename', icon: Pencil },
+    { id: 'edit-tags', label: 'Edit Tags', icon: Tag },
+    { id: 'delete', label: 'Delete', icon: Trash2, danger: true },
+  ];
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 min-w-[160px] bg-slate-800 border border-slate-700 rounded-lg shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
+      style={{ left: x, top: y }}
+    >
+      {actions.map((action, index) => {
+        const Icon = action.icon;
+        return (
+          <div key={action.id}>
+            {action.danger && index > 0 && (
+              <div className="my-1 border-t border-slate-700" />
+            )}
+            <button
+              onClick={() => { onAction(action.id); onClose(); }}
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2 text-sm transition-colors',
+                action.danger
+                  ? 'text-red-400 hover:bg-red-500/10'
+                  : 'text-slate-300 hover:bg-slate-700'
+              )}
+            >
+              <Icon size={14} className="flex-shrink-0" />
+              <span className="flex-1 text-left">{action.label}</span>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ==========================================
+// Tag Editor Inline
+// ==========================================
+
+interface TagEditorProps {
+  tags: string[];
+  onSave: (tags: string[]) => void;
+  onCancel: () => void;
+}
+
+function TagEditor({ tags, onSave, onCancel }: TagEditorProps) {
+  const [inputValue, setInputValue] = useState(tags.join(', '));
+  const inputRef = useCallback((node: HTMLInputElement | null) => {
+    if (node) {
+      node.focus();
+      node.select();
+    }
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const parsed = inputValue.split(',').map(t => t.trim()).filter(Boolean);
+      onSave(parsed);
+    } else if (e.key === 'Escape') {
+      onCancel();
+    }
+  };
+
+  return (
+    <div className="px-3 py-1.5 bg-slate-800/80">
+      <div className="flex items-center gap-1.5 mb-1">
+        <Tag size={10} className="text-slate-500" />
+        <span className="text-[10px] text-slate-500">Tags (comma-separated)</span>
+      </div>
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        onChange={(e) => setInputValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => {
+          const parsed = inputValue.split(',').map(t => t.trim()).filter(Boolean);
+          onSave(parsed);
+        }}
+        placeholder="e.g. sync, release, api"
+        className="w-full bg-white/10 border border-blue-500/50 rounded px-2 py-1 text-xs text-white outline-none focus:border-blue-500 placeholder:text-slate-600"
+      />
+    </div>
   );
 }
 
@@ -290,17 +424,27 @@ function ChatHistoryItemComponent({
 }
 
 // ==========================================
-// Ingestion Entry Row Component
+// Ingestion Entry Row Component (Compact)
 // ==========================================
 
 interface IngestionEntryRowProps {
   entry: IngestionEntry;
   isSelected?: boolean;
-  onSelect?: () => void;
+  onSelect?: (e: React.MouseEvent | React.KeyboardEvent) => void;
+  onRename?: (newName: string) => void;
+  onDelete?: () => void;
+  onUpdateTags?: (tags: string[]) => void;
 }
 
-function IngestionEntryRow({ entry, isSelected, onSelect }: IngestionEntryRowProps) {
+function IngestionEntryRow({ entry, isSelected, onSelect, onRename, onDelete, onUpdateTags }: IngestionEntryRowProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [isEditingTags, setIsEditingTags] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const rowRef = useRef<HTMLDivElement>(null);
 
   const handleDragStart = useCallback((e: React.DragEvent) => {
     setIsDragging(true);
@@ -318,61 +462,224 @@ function IngestionEntryRow({ entry, isSelected, onSelect }: IngestionEntryRowPro
     setIsDragging(false);
   }, []);
 
+  const handleMouseEnter = useCallback(() => {
+    if (!contextMenu && !isRenaming && !isEditingTags) {
+      setIsHovered(true);
+      if (rowRef.current) {
+        const rect = rowRef.current.getBoundingClientRect();
+        setTooltipPos({
+          top: rect.top + rect.height / 2,
+          left: rect.left - 8,
+        });
+      }
+    }
+  }, [contextMenu, isRenaming, isEditingTags]);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsHovered(false);
+    setTooltipPos(null);
+  }, []);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsHovered(false);
+    setTooltipPos(null);
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleContextMenuAction = useCallback((action: IngestionMenuAction) => {
+    setContextMenu(null);
+    switch (action) {
+      case 'rename':
+        setIsRenaming(true);
+        break;
+      case 'edit-tags':
+        setIsEditingTags(true);
+        break;
+      case 'delete':
+        setShowDeleteConfirm(true);
+        break;
+    }
+  }, []);
+
+  const handleRename = useCallback((newName: string) => {
+    setIsRenaming(false);
+    if (newName && newName !== entry.displayName) {
+      onRename?.(newName);
+    }
+  }, [entry.displayName, onRename]);
+
+  const handleSaveTags = useCallback((tags: string[]) => {
+    setIsEditingTags(false);
+    onUpdateTags?.(tags);
+  }, [onUpdateTags]);
+
+  const handleConfirmDelete = useCallback(() => {
+    setShowDeleteConfirm(false);
+    onDelete?.();
+  }, [onDelete]);
+
+  const totalChanges = entry.filesAdded + entry.filesRemoved;
+
   return (
-    <div
-      draggable
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-      onClick={onSelect}
-      className={cn(
-        "py-2 px-2.5 rounded-lg transition-all duration-150 cursor-grab active:cursor-grabbing",
-        "border-l-[3px]",
-        isDragging && "opacity-40 ring-1 ring-blue-500/30",
-        isSelected
-          ? "bg-blue-500/10 border-l-blue-500 hover:bg-blue-500/15"
-          : "bg-slate-800/30 border-l-transparent hover:bg-slate-800/50 hover:border-l-blue-500/30"
-      )}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect?.();
-        }
-      }}
-    >
-      <div className="flex items-center justify-between mb-0.5">
-        <span className={cn(
-          "font-mono text-xs font-semibold",
-          isSelected ? "text-blue-400" : "text-gray-500"
-        )}>
-          #{entry.number}
-        </span>
-        <span className="text-gray-400 text-xs">
-          {formatDateTime(entry.timestamp)}
-        </span>
-      </div>
-      {entry.displayName && (
-        <p className="text-[11px] text-slate-300 truncate mb-0.5">
-          {entry.displayName}
-        </p>
-      )}
-      <div className="flex items-center gap-3 text-xs">
-        {entry.filesAdded > 0 && (
-          <span className="text-emerald-400">
-            {formatFileChange(entry.filesAdded, true)}
+    <>
+      {/* Main row */}
+      <div
+        ref={rowRef}
+        draggable={!isRenaming && !isEditingTags}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onClick={!isRenaming && !isEditingTags ? (e: React.MouseEvent) => onSelect?.(e) : undefined}
+        onContextMenu={handleContextMenu}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={cn(
+          "flex items-center gap-2 px-3 py-1.5 cursor-pointer transition-colors group",
+          isDragging && "opacity-40",
+          isSelected
+            ? "bg-blue-600/10 hover:bg-blue-600/20"
+            : "hover:bg-slate-800/50"
+        )}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect?.(e);
+          }
+        }}
+      >
+        {/* Icon */}
+        <FileUp size={14} className={cn(
+          "flex-shrink-0",
+          isSelected ? "text-blue-400" : "text-slate-500"
+        )} />
+
+        {/* Name or inline rename */}
+        {isRenaming ? (
+          <InlineEdit
+            value={entry.displayName || `Ingestion #${entry.number}`}
+            onSave={handleRename}
+            onCancel={() => setIsRenaming(false)}
+          />
+        ) : (
+          <span className="flex-1 text-xs text-slate-300 truncate">
+            {entry.displayName || `Ingestion #${entry.number}`}
           </span>
         )}
-        {entry.filesRemoved > 0 && (
-          <span className="text-red-400">
-            {formatFileChange(entry.filesRemoved, false)}
+
+        {/* Compact change indicator */}
+        {!isRenaming && totalChanges > 0 && (
+          <span className={cn(
+            "text-[10px] flex-shrink-0 tabular-nums",
+            entry.filesAdded > 0 && entry.filesRemoved === 0 && "text-emerald-500",
+            entry.filesRemoved > 0 && entry.filesAdded === 0 && "text-red-400",
+            entry.filesAdded > 0 && entry.filesRemoved > 0 && "text-slate-500"
+          )}>
+            {entry.filesAdded > 0 && entry.filesRemoved > 0
+              ? `±${totalChanges}`
+              : entry.filesAdded > 0
+                ? `+${entry.filesAdded}`
+                : `-${entry.filesRemoved}`
+            }
           </span>
         )}
-        {entry.filesAdded === 0 && entry.filesRemoved === 0 && (
-          <span className="text-gray-500">No changes</span>
-        )}
       </div>
-    </div>
+
+      {/* Inline tag editor (shown below the row) */}
+      {isEditingTags && (
+        <TagEditor
+          tags={entry.tags || []}
+          onSave={handleSaveTags}
+          onCancel={() => setIsEditingTags(false)}
+        />
+      )}
+
+      {/* Hover tooltip */}
+      {isHovered && tooltipPos && !contextMenu && !isRenaming && !isEditingTags && (
+        <div
+          className="fixed z-50 pointer-events-none animate-in fade-in duration-150"
+          style={{
+            top: tooltipPos.top,
+            left: tooltipPos.left,
+            transform: 'translate(-100%, -50%)',
+          }}
+        >
+          <div className="bg-[#1a1f2e] border border-white/15 rounded-lg shadow-xl px-3 py-2.5 min-w-[180px] max-w-[240px]">
+            {/* Ingestion number */}
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="font-mono text-xs font-semibold text-blue-400">
+                #{entry.number}
+              </span>
+              <span className="text-[10px] text-slate-500">Ingestion</span>
+            </div>
+
+            {/* Date */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <Clock size={10} className="text-slate-500 flex-shrink-0" />
+              <span className="text-[11px] text-slate-400">
+                {formatDateTime(entry.timestamp)}
+              </span>
+            </div>
+
+            {/* File name */}
+            {entry.displayName && (
+              <div className="text-[11px] text-slate-300 truncate mb-1">
+                {entry.displayName}
+              </div>
+            )}
+
+            {/* Changes */}
+            <div className="flex items-center gap-2 text-[11px] mt-1.5 pt-1.5 border-t border-white/10">
+              {entry.filesAdded > 0 && (
+                <span className="text-emerald-400">
+                  {formatFileChange(entry.filesAdded, true)}
+                </span>
+              )}
+              {entry.filesRemoved > 0 && (
+                <span className="text-red-400">
+                  {formatFileChange(entry.filesRemoved, false)}
+                </span>
+              )}
+              {entry.filesAdded === 0 && entry.filesRemoved === 0 && (
+                <span className="text-slate-500">No changes</span>
+              )}
+            </div>
+
+            {/* Tags */}
+            {entry.tags && entry.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5 pt-1.5 border-t border-white/10">
+                {entry.tags.map(tag => (
+                  <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/80 text-slate-400">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Context menu */}
+      {contextMenu && (
+        <IngestionContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onAction={handleContextMenuAction}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* Delete confirmation */}
+      <DeleteConfirmDialog
+        isOpen={showDeleteConfirm}
+        heading="Delete Ingestion"
+        title={entry.displayName || `Ingestion #${entry.number}`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+    </>
   );
 }
 
@@ -473,10 +780,15 @@ function TabButton({ active, onClick, icon, label, count }: TabButtonProps) {
 
 interface RightSidebarProps {
   className?: string;
+  style?: React.CSSProperties;
   onWidthChange?: (width: number) => void;
   projectId?: string;
-  selectedIngestionNumber?: number | null;
-  onSelectIngestion?: (ingestionNumber: number | null) => void;
+  selectedIngestionNumbers?: number[];
+  onSelectIngestion?: (ingestionNumbers: number[]) => void;
+  onNavigateToIngestion?: (ingestionNumber: number) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  expandedWidth?: number;
 }
 
 // ==========================================
@@ -485,31 +797,53 @@ interface RightSidebarProps {
 
 export function RightSidebar({
   className,
+  style,
   onWidthChange,
   projectId = 'default',
-  selectedIngestionNumber,
+  selectedIngestionNumbers = [],
   onSelectIngestion,
+  onNavigateToIngestion,
+  collapsed: externalCollapsed,
+  onToggleCollapse: externalToggleCollapse,
+  expandedWidth,
 }: RightSidebarProps) {
   const { state: chatState, loadChat, deleteChat, renameChat } = useChatHistory();
-  const { metrics, history: ingestionHistory, isLoading: ingestionLoading } = useCompressionData(projectId);
-  const { openIngestionModal } = useIngestion();
-  const { selectedSize, selectedCount, totalCount } = useSourceFiles();
+  const {
+    history: ingestionHistory,
+    metrics: compressionMetrics,
+    isLoading: ingestionLoading,
+    renameIngestion,
+    deleteIngestion,
+    updateIngestionTags,
+  } = useCompressionData(projectId);
+  const { openIngestionModal, openIngestionModalEmpty } = useIngestion();
 
-  // Size bar calculations (matching left sidebar)
-  const tokenEstimate = useMemo(() => Math.round(selectedSize / 4), [selectedSize]);
-  const progressPercentage = useMemo(
-    () => (totalCount > 0 ? (selectedCount / totalCount) * 100 : 0),
-    [selectedCount, totalCount]
+  const selectedIngestionSet = useMemo(
+    () => new Set(selectedIngestionNumbers),
+    [selectedIngestionNumbers]
+  );
+
+  const selectedIngestions = useMemo(
+    () => ingestionHistory.filter(e => selectedIngestionSet.has(e.number)),
+    [ingestionHistory, selectedIngestionSet]
+  );
+
+  const totalIngestionTokens = useMemo(
+    () => ingestionHistory.reduce((sum, e) => sum + e.tokens, 0),
+    [ingestionHistory]
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [isCollapsed, setIsCollapsed] = useState(() => {
+  const [internalCollapsed, setInternalCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(STORAGE_KEY);
       return saved === 'true';
     }
     return false;
   });
+
+  // Use external collapse state when provided, otherwise fall back to internal
+  const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
   const [activeTab, setActiveTab] = useState<SidebarTab>(() => {
     if (typeof window !== 'undefined') {
@@ -527,11 +861,13 @@ export function RightSidebar({
   // Debounced search
   const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // Persist collapse state
+  // Persist collapse state (only when using internal state)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, String(isCollapsed));
-    onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH);
-  }, [isCollapsed, onWidthChange]);
+    if (externalCollapsed === undefined) {
+      localStorage.setItem(STORAGE_KEY, String(internalCollapsed));
+    }
+    onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : (expandedWidth ?? EXPANDED_WIDTH));
+  }, [isCollapsed, internalCollapsed, externalCollapsed, onWidthChange]);
 
   // Persist active tab
   useEffect(() => {
@@ -540,7 +876,7 @@ export function RightSidebar({
 
   // Notify parent of initial width
   useEffect(() => {
-    onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH);
+    onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : (expandedWidth ?? EXPANDED_WIDTH));
   }, []);
 
   // Clear search when switching tabs
@@ -549,8 +885,12 @@ export function RightSidebar({
   }, [activeTab]);
 
   const handleToggleCollapse = useCallback(() => {
-    setIsCollapsed(prev => !prev);
-  }, []);
+    if (externalToggleCollapse) {
+      externalToggleCollapse();
+    } else {
+      setInternalCollapsed(prev => !prev);
+    }
+  }, [externalToggleCollapse]);
 
   // Filter and group chats
   const { groupedChats, hasChatsResults } = useMemo(() => {
@@ -635,8 +975,8 @@ export function RightSidebar({
   const [isIngestionDragOver, setIsIngestionDragOver] = useState(false);
 
   const handleNewIngestion = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+    openIngestionModalEmpty();
+  }, [openIngestionModalEmpty]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -685,7 +1025,8 @@ export function RightSidebar({
     });
   }, [openIngestionModal]);
 
-  const currentWidth = isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH;
+  const resolvedExpandedWidth = expandedWidth ?? EXPANDED_WIDTH;
+  const currentWidth = isCollapsed ? COLLAPSED_WIDTH : resolvedExpandedWidth;
 
   return (
     <aside
@@ -698,6 +1039,7 @@ export function RightSidebar({
         width: currentWidth,
         minWidth: currentWidth,
         transitionDuration: `${TRANSITION_DURATION}ms`,
+        ...style,
       }}
     >
       {isCollapsed ? (
@@ -856,16 +1198,30 @@ export function RightSidebar({
                 ) : !hasIngestionsResults ? (
                   <EmptyState type="ingestions" hasSearch={debouncedSearch.trim().length > 0} />
                 ) : (
-                  <div className="flex-1 overflow-y-auto px-2 py-1">
-                    <div className="space-y-1.5 pb-4">
+                  <div className="flex-1 overflow-y-auto">
+                    <div className="py-1">
                       {filteredIngestions.map((entry) => (
                         <IngestionEntryRow
                           key={entry.number}
                           entry={entry}
-                          isSelected={selectedIngestionNumber === entry.number}
-                          onSelect={() => onSelectIngestion?.(
-                            selectedIngestionNumber === entry.number ? null : entry.number
-                          )}
+                          isSelected={selectedIngestionSet.has(entry.number)}
+                          onSelect={(e) => {
+                            const isCtrl = 'ctrlKey' in e && (e.ctrlKey || e.metaKey);
+                            if (isCtrl) {
+                              // Ctrl+click: toggle this entry in/out of selection
+                              const next = selectedIngestionSet.has(entry.number)
+                                ? selectedIngestionNumbers.filter(n => n !== entry.number)
+                                : [...selectedIngestionNumbers, entry.number];
+                              onSelectIngestion?.(next);
+                            } else {
+                              // Regular click: navigate to Knowledge Base tab and highlight this ingestion
+                              onSelectIngestion?.([entry.number]);
+                              onNavigateToIngestion?.(entry.number);
+                            }
+                          }}
+                          onRename={(newName) => renameIngestion(entry.number, newName)}
+                          onDelete={() => deleteIngestion(entry.number)}
+                          onUpdateTags={(tags) => updateIngestionTags(entry.number, tags)}
                         />
                       ))}
                     </div>
@@ -875,47 +1231,77 @@ export function RightSidebar({
             )}
           </div>
 
-          {/* Size Bar + Ingestion Stats (only for ingestions tab) */}
+          {/* Size Bar */}
           {activeTab === 'ingestions' && (
-            <div className="shrink-0 border-t border-[#1e293b]">
-              {/* Size Bar - matching left sidebar */}
-              <div className="p-3 bg-slate-900/50">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Selected size:</span>
-                  <span className="text-slate-300 font-medium">
-                    {formatFileSize(selectedSize)}
-                  </span>
-                </div>
-                <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600 rounded-full transition-all duration-300"
-                    style={{ width: `${progressPercentage}%` }}
-                  />
-                </div>
-                <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
-                  <span>{selectedCount} files</span>
-                  <span>~{tokenEstimate} tokens</span>
-                </div>
-              </div>
-
-              {/* Ingestion Stats */}
-              {metrics && (
-                <div className="px-3 py-2 border-t border-white/10">
-                  <div className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <div className="text-white font-semibold text-sm">{metrics.totalIngestions}</div>
-                      <div className="text-gray-500 text-[9px] uppercase">Total</div>
-                    </div>
-                    <div>
-                      <div className="text-white font-medium text-[11px]">{formatRelativeTime(metrics.lastIngestion)}</div>
-                      <div className="text-gray-500 text-[9px] uppercase">Last</div>
-                    </div>
-                    <div>
-                      <div className="text-white font-medium text-[11px]">{formatInterval(metrics.avgInterval)}</div>
-                      <div className="text-gray-500 text-[9px] uppercase">Avg</div>
-                    </div>
+            <div className="shrink-0 border-t border-[#1e293b] p-3 bg-slate-900/50">
+              {selectedIngestions.length === 1 ? (
+                // Single selection: show that ingestion's stats
+                <>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Ingestion #{selectedIngestions[0].number}:</span>
+                    <span className="text-slate-300 font-medium">
+                      {selectedIngestions[0].tokens.toLocaleString()} tokens
+                    </span>
                   </div>
-                </div>
+                  <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                      style={{ width: `${totalIngestionTokens > 0 ? (selectedIngestions[0].tokens / totalIngestionTokens) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+                    <span>{selectedIngestions[0].filesAdded} files added</span>
+                    <span>{totalIngestionTokens > 0 ? ((selectedIngestions[0].tokens / totalIngestionTokens) * 100).toFixed(1) : 0}% of total</span>
+                  </div>
+                </>
+              ) : selectedIngestions.length > 1 ? (
+                // Multi-selection: show aggregated stats
+                (() => {
+                  const totalSelectedTokens = selectedIngestions.reduce((sum, e) => sum + e.tokens, 0);
+                  const totalSelectedFiles = selectedIngestions.reduce((sum, e) => sum + e.filesAdded, 0);
+                  return (
+                    <>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">{selectedIngestions.length} selected:</span>
+                        <span className="text-slate-300 font-medium">
+                          {totalSelectedTokens.toLocaleString()} tokens
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                          style={{ width: `${totalIngestionTokens > 0 ? (totalSelectedTokens / totalIngestionTokens) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+                        <span>{totalSelectedFiles} files added</span>
+                        <span>{totalIngestionTokens > 0 ? ((totalSelectedTokens / totalIngestionTokens) * 100).toFixed(1) : 0}% of total</span>
+                      </div>
+                    </>
+                  );
+                })()
+              ) : (
+                // No selection: show total context stats
+                <>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500">Total context:</span>
+                    <span className="text-slate-300 font-medium">
+                      {compressionMetrics ? compressionMetrics.originalTokens.toLocaleString() : '—'} tokens
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                      style={{ width: `${compressionMetrics?.savingsPercent ?? 0}%` }}
+                    />
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
+                    <span>{ingestionHistory.length} ingestions</span>
+                    <span>
+                      {compressionMetrics ? `${compressionMetrics.compressedTokens.toLocaleString()} compressed` : '—'}
+                    </span>
+                  </div>
+                </>
               )}
             </div>
           )}

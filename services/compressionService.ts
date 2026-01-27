@@ -62,16 +62,16 @@ const MOCK_COMPRESSION_DATA: Record<string, {
       avgInterval: 3.2,
     },
     history: [
-      { number: 12, timestamp: new Date('2026-01-22T15:23:00'), filesAdded: 127, filesRemoved: 3, displayName: 'Full project sync' },
-      { number: 11, timestamp: new Date('2026-01-19T09:45:00'), filesAdded: 45, filesRemoved: 1, displayName: 'Auth module update' },
-      { number: 10, timestamp: new Date('2026-01-15T14:12:00'), filesAdded: 89, filesRemoved: 12, displayName: 'API refactor' },
-      { number: 9, timestamp: new Date('2026-01-12T11:30:00'), filesAdded: 23, filesRemoved: 0, displayName: 'Config files' },
-      { number: 8, timestamp: new Date('2026-01-09T16:45:00'), filesAdded: 156, filesRemoved: 8, displayName: 'Dashboard components' },
-      { number: 7, timestamp: new Date('2026-01-05T10:20:00'), filesAdded: 67, filesRemoved: 4, displayName: 'Utility functions' },
-      { number: 6, timestamp: new Date('2026-01-02T13:15:00'), filesAdded: 34, filesRemoved: 2, displayName: 'Test suite' },
-      { number: 5, timestamp: new Date('2025-12-28T09:00:00'), filesAdded: 201, filesRemoved: 15, displayName: 'Initial codebase import' },
-      { number: 4, timestamp: new Date('2025-12-24T14:30:00'), filesAdded: 78, filesRemoved: 5, displayName: 'Shared types' },
-      { number: 3, timestamp: new Date('2025-12-20T11:45:00'), filesAdded: 112, filesRemoved: 7, displayName: 'Core services' },
+      { number: 12, timestamp: new Date('2026-01-22T15:23:00'), filesAdded: 127, filesRemoved: 3, tokens: 389200, displayName: 'Full project sync', tags: ['sync', 'release'] },
+      { number: 11, timestamp: new Date('2026-01-19T09:45:00'), filesAdded: 45, filesRemoved: 1, tokens: 134500, displayName: 'Auth module update', tags: ['auth'] },
+      { number: 10, timestamp: new Date('2026-01-15T14:12:00'), filesAdded: 89, filesRemoved: 12, tokens: 267800, displayName: 'API refactor', tags: ['refactor', 'api'] },
+      { number: 9, timestamp: new Date('2026-01-12T11:30:00'), filesAdded: 23, filesRemoved: 0, tokens: 48200, displayName: 'Config files', tags: ['config'] },
+      { number: 8, timestamp: new Date('2026-01-09T16:45:00'), filesAdded: 156, filesRemoved: 8, tokens: 485600, displayName: 'Dashboard components', tags: ['ui'] },
+      { number: 7, timestamp: new Date('2026-01-05T10:20:00'), filesAdded: 67, filesRemoved: 4, tokens: 178400, displayName: 'Utility functions', tags: ['utils'] },
+      { number: 6, timestamp: new Date('2026-01-02T13:15:00'), filesAdded: 34, filesRemoved: 2, tokens: 92100, displayName: 'Test suite', tags: ['tests'] },
+      { number: 5, timestamp: new Date('2025-12-28T09:00:00'), filesAdded: 201, filesRemoved: 15, tokens: 612400, displayName: 'Initial codebase import', tags: ['initial', 'sync'] },
+      { number: 4, timestamp: new Date('2025-12-24T14:30:00'), filesAdded: 78, filesRemoved: 5, tokens: 156800, displayName: 'Shared types', tags: ['types'] },
+      { number: 3, timestamp: new Date('2025-12-20T11:45:00'), filesAdded: 112, filesRemoved: 7, tokens: 289600, displayName: 'Core services', tags: ['core'] },
     ],
     algorithmInfo: {
       method: 'Hypervisa Contextual Compression v2.1',
@@ -103,7 +103,8 @@ export async function addIngestionEntry(
   contextId: string,
   filesAdded: number,
   filesRemoved: number = 0,
-  displayName?: string
+  displayName?: string,
+  tokens: number = 0
 ): Promise<IngestionEntry> {
   await new Promise(resolve => setTimeout(resolve, 300));
   const data = MOCK_COMPRESSION_DATA[contextId] || MOCK_COMPRESSION_DATA.default;
@@ -113,6 +114,7 @@ export async function addIngestionEntry(
     timestamp: new Date(),
     filesAdded,
     filesRemoved,
+    tokens,
     displayName,
   };
   // Create new array reference so React detects the change
@@ -129,6 +131,54 @@ export async function addIngestionEntry(
   }));
 
   return newEntry;
+}
+
+export async function renameIngestion(
+  contextId: string,
+  ingestionNumber: number,
+  newName: string
+): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const data = MOCK_COMPRESSION_DATA[contextId] || MOCK_COMPRESSION_DATA.default;
+  const entry = data.history.find(e => e.number === ingestionNumber);
+  if (entry) {
+    entry.displayName = newName;
+  }
+  window.dispatchEvent(new CustomEvent('kijko-ingestion-updated', {
+    detail: { ingestionNumber, field: 'displayName', value: newName },
+  }));
+}
+
+export async function deleteIngestion(
+  contextId: string,
+  ingestionNumber: number
+): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, 300));
+  const data = MOCK_COMPRESSION_DATA[contextId] || MOCK_COMPRESSION_DATA.default;
+  data.history = data.history.filter(e => e.number !== ingestionNumber);
+  data.metrics = {
+    ...data.metrics,
+    totalIngestions: Math.max(0, data.metrics.totalIngestions - 1),
+  };
+  window.dispatchEvent(new CustomEvent('kijko-ingestion-deleted', {
+    detail: { ingestionNumber, metrics: data.metrics },
+  }));
+}
+
+export async function updateIngestionTags(
+  contextId: string,
+  ingestionNumber: number,
+  tags: string[]
+): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, 200));
+  const data = MOCK_COMPRESSION_DATA[contextId] || MOCK_COMPRESSION_DATA.default;
+  const entry = data.history.find(e => e.number === ingestionNumber);
+  if (entry) {
+    entry.tags = tags;
+  }
+  window.dispatchEvent(new CustomEvent('kijko-ingestion-updated', {
+    detail: { ingestionNumber, field: 'tags', value: tags },
+  }));
 }
 
 export async function triggerRecompression(contextId: string): Promise<{ success: boolean; message: string }> {

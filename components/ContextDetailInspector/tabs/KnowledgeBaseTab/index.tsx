@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   AlertCircle,
   Database,
@@ -12,12 +12,13 @@ import {
   Minus,
 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
-import { formatNumber, formatDateTime, formatRelativeTime, formatFileChange } from '../../../../utils/formatting';
+import { formatDateTime, formatFileChange } from '../../../../utils/formatting';
 import { useCompressionData } from '../CompressionTab/hooks';
 import type { IngestionEntry } from '../../../../types/contextInspector';
 
 interface KnowledgeBaseTabProps {
   contextId: string;
+  selectedIngestionNumbers?: number[];
 }
 
 function LoadingSkeleton() {
@@ -25,11 +26,6 @@ function LoadingSkeleton() {
     <div className="animate-pulse p-6">
       <div className="space-y-4">
         <div className="h-20 bg-slate-800/50 rounded-lg" />
-        <div className="grid grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 bg-slate-800/50 rounded-lg" />
-          ))}
-        </div>
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-16 bg-slate-800/50 rounded-lg" />
@@ -43,12 +39,29 @@ function LoadingSkeleton() {
 type SortField = 'number' | 'timestamp' | 'filesAdded';
 type SortDirection = 'asc' | 'desc';
 
-function IngestionCard({ entry }: { entry: IngestionEntry }) {
+interface IngestionCardProps {
+  entry: IngestionEntry;
+  isSelected?: boolean;
+  cardRef?: React.Ref<HTMLDivElement>;
+}
+
+function IngestionCard({ entry, isSelected, cardRef }: IngestionCardProps) {
   return (
-    <div className="py-3 px-4 bg-slate-800/30 rounded-lg hover:bg-slate-800/50 transition-colors border border-white/5 hover:border-white/10">
+    <div
+      ref={cardRef}
+      className={cn(
+        "py-3 px-4 rounded-lg transition-colors border",
+        isSelected
+          ? "bg-blue-600/15 border-blue-500/40 ring-1 ring-blue-500/20"
+          : "bg-slate-800/30 hover:bg-slate-800/50 border-white/5 hover:border-white/10"
+      )}
+    >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-blue-500/15 flex items-center justify-center">
+          <div className={cn(
+            "w-7 h-7 rounded-md flex items-center justify-center",
+            isSelected ? "bg-blue-500/25" : "bg-blue-500/15"
+          )}>
             <Package size={14} className="text-blue-400" />
           </div>
           <div>
@@ -81,7 +94,7 @@ function IngestionCard({ entry }: { entry: IngestionEntry }) {
   );
 }
 
-export function KnowledgeBaseTab({ contextId }: KnowledgeBaseTabProps) {
+export function KnowledgeBaseTab({ contextId, selectedIngestionNumbers = [] }: KnowledgeBaseTabProps) {
   const {
     metrics,
     history,
@@ -94,6 +107,16 @@ export function KnowledgeBaseTab({ contextId }: KnowledgeBaseTabProps) {
   const [sortField, setSortField] = useState<SortField>('number');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
+  const selectedSet = useMemo(() => new Set(selectedIngestionNumbers), [selectedIngestionNumbers]);
+  const selectedCardRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to the selected ingestion card when selection changes
+  useEffect(() => {
+    if (selectedIngestionNumbers.length === 1 && selectedCardRef.current) {
+      selectedCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [selectedIngestionNumbers]);
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection((d) => (d === 'desc' ? 'asc' : 'desc'));
@@ -102,13 +125,6 @@ export function KnowledgeBaseTab({ contextId }: KnowledgeBaseTabProps) {
       setSortDirection('desc');
     }
   };
-
-  // Derived stats from ingestion history
-  const stats = useMemo(() => {
-    const totalFilesAdded = history.reduce((sum, e) => sum + e.filesAdded, 0);
-    const totalFilesRemoved = history.reduce((sum, e) => sum + e.filesRemoved, 0);
-    return { totalFilesAdded, totalFilesRemoved };
-  }, [history]);
 
   // Filter and sort ingestions
   const filteredIngestions = useMemo(() => {
@@ -194,26 +210,6 @@ export function KnowledgeBaseTab({ contextId }: KnowledgeBaseTabProps) {
             Refresh
           </button>
         </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-4 gap-3">
-          <div className="bg-slate-800/40 rounded-lg px-3 py-2.5">
-            <div className="text-white font-semibold text-lg">{metrics.totalIngestions}</div>
-            <div className="text-gray-500 text-[10px] uppercase tracking-wider">Ingestions</div>
-          </div>
-          <div className="bg-slate-800/40 rounded-lg px-3 py-2.5">
-            <div className="text-emerald-400 font-semibold text-lg">{formatNumber(stats.totalFilesAdded)}</div>
-            <div className="text-gray-500 text-[10px] uppercase tracking-wider">Files Added</div>
-          </div>
-          <div className="bg-slate-800/40 rounded-lg px-3 py-2.5">
-            <div className="text-red-400 font-semibold text-lg">{formatNumber(stats.totalFilesRemoved)}</div>
-            <div className="text-gray-500 text-[10px] uppercase tracking-wider">Files Removed</div>
-          </div>
-          <div className="bg-slate-800/40 rounded-lg px-3 py-2.5">
-            <div className="text-white font-semibold text-lg">{formatRelativeTime(metrics.lastIngestion)}</div>
-            <div className="text-gray-500 text-[10px] uppercase tracking-wider">Last Ingestion</div>
-          </div>
-        </div>
       </div>
 
       {/* Search + Sort Bar */}
@@ -272,7 +268,12 @@ export function KnowledgeBaseTab({ contextId }: KnowledgeBaseTabProps) {
             </div>
           ) : (
             filteredIngestions.map((entry) => (
-              <IngestionCard key={entry.number} entry={entry} />
+              <IngestionCard
+                key={entry.number}
+                entry={entry}
+                isSelected={selectedSet.has(entry.number)}
+                cardRef={selectedIngestionNumbers.length === 1 && selectedIngestionNumbers[0] === entry.number ? selectedCardRef : undefined}
+              />
             ))
           )}
         </div>

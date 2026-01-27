@@ -4,16 +4,15 @@ import { PageOverviewTab } from './PageOverviewTab';
 import { CompressionTab } from '../../../../components/ContextDetailInspector/tabs/CompressionTab';
 import { KnowledgeBaseTab } from '../../../../components/ContextDetailInspector/tabs/KnowledgeBaseTab';
 import { KnowledgeGraphTab } from '../../../../components/ContextDetailInspector/tabs/KnowledgeGraphTab';
-import { IngestionDetailView } from './IngestionDetailView';
 import type { TabType, ContextItem } from '../../../../types/contextInspector';
 
 interface MainContentProps {
   className?: string;
+  style?: React.CSSProperties;
   projectName?: string;
   projectId?: string;
   activeTab: TabType;
-  selectedIngestionNumber?: number | null;
-  onCloseIngestionDetail?: () => void;
+  selectedIngestionNumbers?: number[];
   onViewFullGraph?: () => void;
 }
 
@@ -33,11 +32,11 @@ function createContextItem(projectId: string, projectName: string): ContextItem 
 
 export function MainContent({
   className,
+  style,
   projectName = 'Project',
   projectId = 'default',
   activeTab,
-  selectedIngestionNumber,
-  onCloseIngestionDetail,
+  selectedIngestionNumbers = [],
   onViewFullGraph,
 }: MainContentProps) {
   // Project name state for editing
@@ -51,25 +50,13 @@ export function MainContent({
   // Create context item for tab components
   const contextItem = createContextItem(projectId, currentProjectName);
 
-  // Render the active tab content or ingestion detail view
+  // Render the active tab content
   const renderContent = () => {
-    // If an ingestion is selected, show the detail view
-    if (selectedIngestionNumber != null) {
-      return (
-        <IngestionDetailView
-          ingestionNumber={selectedIngestionNumber}
-          contextId={contextItem.id}
-          onClose={onCloseIngestionDetail || (() => {})}
-        />
-      );
-    }
-
-    // Otherwise, show the active tab content
     switch (activeTab) {
       case 'overview':
         return <PageOverviewTab contextItem={contextItem} />;
       case 'knowledgebase':
-        return <KnowledgeBaseTab contextId={contextItem.id} />;
+        return <KnowledgeBaseTab contextId={contextItem.id} selectedIngestionNumbers={selectedIngestionNumbers} />;
       case 'compression':
         return <CompressionTab contextItem={contextItem} />;
       case 'knowledgegraph':
@@ -85,6 +72,7 @@ export function MainContent({
         'h-full bg-[#0a0e1a] flex flex-col overflow-hidden',
         className
       )}
+      style={style}
     >
       {/* Tab Content Area */}
       <div className="flex-1 overflow-hidden">

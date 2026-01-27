@@ -94,7 +94,9 @@ export interface IngestionEntry {
   timestamp: Date;
   filesAdded: number;
   filesRemoved: number;
+  tokens: number;
   displayName?: string;
+  tags?: string[];
 }
 
 // Compression algorithm details

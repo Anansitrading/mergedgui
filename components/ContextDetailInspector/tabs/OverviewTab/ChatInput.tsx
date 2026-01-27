@@ -13,10 +13,13 @@ import {
   X,
   Check,
   Circle,
+  Wrench,
 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { AI_MODELS } from '../../../../types/settings';
 import type { AIModel } from '../../../../types/settings';
+import { SkillSelectorPopover } from './SkillSelectorPopover';
+import type { Skill } from '../../../../types/skills';
 
 // Web Speech API type declarations
 interface SpeechRecognitionEvent extends Event {
@@ -104,6 +107,7 @@ export function ChatInput({
   const [expandedPreview, setExpandedPreview] = useState<number | null>(null);
   const [internalExpanded, setInternalExpanded] = useState(false);
   const [isContextSelectorOpen, setIsContextSelectorOpen] = useState(false);
+  const [isSkillSelectorOpen, setIsSkillSelectorOpen] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
 
@@ -117,6 +121,7 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const contextSelectorRef = useRef<HTMLDivElement>(null);
+  const skillButtonRef = useRef<HTMLButtonElement>(null);
 
   // Get current model info
   const currentModel = AI_MODELS.find((m) => m.id === selectedModel) || AI_MODELS[0];
@@ -172,8 +177,17 @@ export function ChatInput({
       if (newValue.endsWith('@') && !isContextSelectorOpen) {
         setIsContextSelectorOpen(true);
       }
+
+      // Check if / was just typed (at start of line or after space)
+      if (
+        newValue.endsWith('/') &&
+        !isSkillSelectorOpen &&
+        (newValue.length === 1 || newValue[newValue.length - 2] === ' ' || newValue[newValue.length - 2] === '\n')
+      ) {
+        setIsSkillSelectorOpen(true);
+      }
     },
-    [isContextSelectorOpen]
+    [isContextSelectorOpen, isSkillSelectorOpen]
   );
 
   // Cleanup preview URLs on unmount
@@ -211,6 +225,7 @@ export function ChatInput({
       if (e.key === 'Escape') {
         setIsContextSelectorOpen(false);
         setIsModelSelectorOpen(false);
+        setIsSkillSelectorOpen(false);
       }
     },
     [handleSubmit]
@@ -406,6 +421,11 @@ export function ChatInput({
     localStorage.setItem('kijko_selected_model', modelId);
   }, []);
 
+  const handleSkillSelect = useCallback((skill: Skill) => {
+    insertTextAtCursor(`/skill:${skill.name}`);
+    setIsSkillSelectorOpen(false);
+  }, [insertTextAtCursor]);
+
   // Load saved model on mount
   useEffect(() => {
     const savedModel = localStorage.getItem('kijko_selected_model') as AIModel | null;
@@ -577,6 +597,15 @@ export function ChatInput({
               </div>
             )}
 
+            {/* Skill Selector Popover (portal) */}
+            {isSkillSelectorOpen && (
+              <SkillSelectorPopover
+                anchorRef={skillButtonRef}
+                onSelectSkill={handleSkillSelect}
+                onClose={() => setIsSkillSelectorOpen(false)}
+              />
+            )}
+
             {/* Bottom Toolbar - inside the card */}
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 border-t border-white/5">
               {/* Left side - Icons */}
@@ -601,6 +630,17 @@ export function ChatInput({
                   aria-label="Follow agent"
                 >
                   <Crosshair className="w-4 h-4" />
+                </button>
+
+                {/* Skill Selector Button */}
+                <button
+                  ref={skillButtonRef}
+                  onClick={() => setIsSkillSelectorOpen(!isSkillSelectorOpen)}
+                  className={isSkillSelectorOpen ? activeToolbarButtonClass : toolbarButtonClass}
+                  title="Browse skills"
+                  aria-label="Browse skills"
+                >
+                  <Wrench className="w-4 h-4" />
                 </button>
               </div>
 

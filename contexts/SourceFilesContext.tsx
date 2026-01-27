@@ -309,9 +309,6 @@ export function SourceFilesProvider({ children }: SourceFilesProviderProps) {
         state.files.some((f) => f.id === id)
       );
       dispatch({ type: 'SET_SELECTED_FILES', payload: validSelection });
-    } else {
-      // Select all files by default
-      dispatch({ type: 'SELECT_ALL' });
     }
   }, []);
 

@@ -11,6 +11,9 @@ import {
   getCompressionData,
   triggerRecompression,
   downloadOriginal,
+  renameIngestion as renameIngestionService,
+  deleteIngestion as deleteIngestionService,
+  updateIngestionTags as updateIngestionTagsService,
 } from '../../../../../services/compressionService';
 
 export interface UseCompressionDataReturn {
@@ -27,6 +30,9 @@ export interface UseCompressionDataReturn {
   download: () => Promise<void>;
   isDownloading: boolean;
   refresh: () => Promise<void>;
+  renameIngestion: (ingestionNumber: number, newName: string) => Promise<void>;
+  deleteIngestion: (ingestionNumber: number) => Promise<void>;
+  updateIngestionTags: (ingestionNumber: number, tags: string[]) => Promise<void>;
 }
 
 export function useCompressionData(contextId: string): UseCompressionDataReturn {
@@ -65,7 +71,7 @@ export function useCompressionData(contextId: string): UseCompressionDataReturn 
 
   // Directly update state when a new ingestion is added via the service
   useEffect(() => {
-    const handler = (e: Event) => {
+    const handleAdded = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.entry) {
         setHistory(prev => [detail.entry, ...prev]);
@@ -74,8 +80,36 @@ export function useCompressionData(contextId: string): UseCompressionDataReturn 
         setMetrics(detail.metrics);
       }
     };
-    window.addEventListener('kijko-ingestion-added', handler);
-    return () => window.removeEventListener('kijko-ingestion-added', handler);
+
+    const handleUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.ingestionNumber != null) {
+        setHistory(prev => prev.map(entry =>
+          entry.number === detail.ingestionNumber
+            ? { ...entry, [detail.field]: detail.value }
+            : entry
+        ));
+      }
+    };
+
+    const handleDeleted = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.ingestionNumber != null) {
+        setHistory(prev => prev.filter(entry => entry.number !== detail.ingestionNumber));
+      }
+      if (detail?.metrics) {
+        setMetrics(detail.metrics);
+      }
+    };
+
+    window.addEventListener('kijko-ingestion-added', handleAdded);
+    window.addEventListener('kijko-ingestion-updated', handleUpdated);
+    window.addEventListener('kijko-ingestion-deleted', handleDeleted);
+    return () => {
+      window.removeEventListener('kijko-ingestion-added', handleAdded);
+      window.removeEventListener('kijko-ingestion-updated', handleUpdated);
+      window.removeEventListener('kijko-ingestion-deleted', handleDeleted);
+    };
   }, []);
 
   const recompress = useCallback(async () => {
@@ -111,6 +145,18 @@ export function useCompressionData(contextId: string): UseCompressionDataReturn 
     }
   }, [contextId]);
 
+  const renameIngestion = useCallback(async (ingestionNumber: number, newName: string) => {
+    await renameIngestionService(contextId, ingestionNumber, newName);
+  }, [contextId]);
+
+  const deleteIngestion = useCallback(async (ingestionNumber: number) => {
+    await deleteIngestionService(contextId, ingestionNumber);
+  }, [contextId]);
+
+  const updateIngestionTags = useCallback(async (ingestionNumber: number, tags: string[]) => {
+    await updateIngestionTagsService(contextId, ingestionNumber, tags);
+  }, [contextId]);
+
   return {
     metrics,
     history,
@@ -125,5 +171,8 @@ export function useCompressionData(contextId: string): UseCompressionDataReturn 
     download,
     isDownloading,
     refresh: fetchData,
+    renameIngestion,
+    deleteIngestion,
+    updateIngestionTags,
   };
 }
