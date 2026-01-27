@@ -51,7 +51,16 @@ export function IngestionModal({ projectName, projectId }: IngestionModalProps) 
       else if (selectedFile?.id.startsWith('text-')) sourceType = 'text';
 
       // Add an ingestion entry to the right panel's ingestion history
-      await addIngestionEntry(projectId, 1, 0, config.displayName, 0, sourceType);
+      await addIngestionEntry(
+        projectId,
+        1,
+        0,
+        config.displayName,
+        0,
+        sourceType,
+        config.processingMode === 'compress',
+        config.neverCompress
+      );
 
       // Close the modal after successful ingestion
       resetSourceState();

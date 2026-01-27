@@ -30,6 +30,15 @@ import type { Notification, SettingsSection } from '../../types/settings';
 // Valid tab values
 const VALID_TABS: TabType[] = ['overview', 'knowledgebase', 'knowledgegraph'];
 
+// Color palette per worktree (cycles if more worktrees than colors)
+const WORKTREE_COLORS = [
+  { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+  { bg: 'bg-violet-500/10',  text: 'text-violet-400',  border: 'border-violet-500/20' },
+  { bg: 'bg-amber-500/10',   text: 'text-amber-400',   border: 'border-amber-500/20' },
+  { bg: 'bg-sky-500/10',     text: 'text-sky-400',     border: 'border-sky-500/20' },
+  { bg: 'bg-rose-500/10',    text: 'text-rose-400',    border: 'border-rose-500/20' },
+];
+
 // Mock worktree data
 const MOCK_WORKTREES: WorktreeWithBranches[] = [
   {
@@ -78,7 +87,7 @@ function ProjectDetailPageContent() {
   const { createNewChat, addMessage } = useChatHistory();
 
   // Layout context
-  const { state: layoutState, toggleLeftSidebar, toggleRightSidebar } = useLayout();
+  const { state: layoutState, toggleLeftSidebar } = useLayout();
 
   // Selected ingestion for master-detail pattern
   const [selectedIngestionNumbers, setSelectedIngestionNumbers] = useState<number[]>([]);
@@ -116,6 +125,7 @@ function ProjectDetailPageContent() {
   const worktreeSwitcherRef = useRef<HTMLDivElement>(null);
   const [selectedWorktree, setSelectedWorktree] = useState<WorktreeWithBranches>(MOCK_WORKTREES[0]);
   const [selectedBranch, setSelectedBranch] = useState(MOCK_WORKTREES[0].currentBranch);
+  const [hoveredWorktree, setHoveredWorktree] = useState<WorktreeWithBranches | null>(null);
 
   // Left sidebar resizing (delta-based for panel reorder support)
   const [sidebarWidth, setSidebarWidth] = useState(240);
@@ -381,82 +391,101 @@ function ProjectDetailPageContent() {
               </button>
 
               {isWorktreeSwitcherOpen && (
-                <div className="absolute top-full left-0 mt-1 w-80 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1 max-h-96 overflow-y-auto">
-                  {/* Worktrees section */}
-                  <div className="px-3 py-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Worktrees</span>
-                  </div>
-                  {MOCK_WORKTREES.map((ws) => (
-                    <button
-                      key={ws.id}
-                      onClick={() => {
-                        setSelectedWorktree(ws);
-                        setSelectedBranch(ws.currentBranch);
-                      }}
-                      className={cn(
-                        'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
-                        ws.id === selectedWorktree.id
-                          ? 'bg-emerald-500/10 text-white'
-                          : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                      )}
-                    >
-                      <FolderOpen className={cn(
-                        'w-4 h-4 flex-shrink-0',
-                        ws.id === selectedWorktree.id ? 'text-emerald-400' : 'text-gray-500'
-                      )} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{ws.name}</div>
-                        <div className="text-[11px] text-gray-500">{ws.path}</div>
-                      </div>
-                      {ws.id === selectedWorktree.id && (
-                        <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                      )}
-                    </button>
-                  ))}
-
-                  {/* Divider */}
-                  <div className="border-t border-[#1e293b] my-1" />
-
-                  {/* Branches section */}
-                  <div className="px-3 py-1.5">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                      Branches — {selectedWorktree.name}
-                    </span>
-                  </div>
-                  {selectedWorktree.branches.map((branch) => (
-                    <button
-                      key={branch.name}
-                      onClick={() => {
-                        setSelectedBranch(branch.name);
-                        setIsWorktreeSwitcherOpen(false);
-                      }}
-                      className={cn(
-                        'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
-                        branch.name === selectedBranch
-                          ? 'bg-orange-500/10 text-white'
-                          : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                      )}
-                    >
-                      <GitBranch className={cn(
-                        'w-4 h-4 flex-shrink-0',
-                        branch.name === selectedBranch ? 'text-orange-400' : 'text-gray-500'
-                      )} />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">
-                          {branch.name}
-                          {branch.isDefault && (
-                            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">default</span>
+                <div
+                  className="absolute top-full left-0 mt-1 z-50"
+                  onMouseLeave={() => setHoveredWorktree(null)}
+                >
+                  {/* Worktrees panel */}
+                  <div className="w-56 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl py-1">
+                    <div className="px-3 py-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500">Worktrees</span>
+                    </div>
+                    {MOCK_WORKTREES.map((ws, wsIndex) => {
+                      const color = WORKTREE_COLORS[wsIndex % WORKTREE_COLORS.length];
+                      return (
+                      <div key={ws.id} className="relative">
+                        <button
+                          onMouseEnter={() => setHoveredWorktree(ws)}
+                          onClick={() => {
+                            setSelectedWorktree(ws);
+                            setSelectedBranch(ws.currentBranch);
+                          }}
+                          className={cn(
+                            'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
+                            ws.id === selectedWorktree.id
+                              ? `${color.bg} text-white`
+                              : hoveredWorktree?.id === ws.id
+                                ? 'bg-white/5 text-white'
+                                : 'text-gray-300 hover:bg-white/5 hover:text-white'
                           )}
-                        </div>
-                        {branch.lastCommit && (
-                          <div className="text-[11px] text-gray-500">{branch.lastCommit}</div>
+                        >
+                          <FolderOpen className={cn(
+                            'w-4 h-4 flex-shrink-0',
+                            ws.id === selectedWorktree.id ? color.text : 'text-gray-500'
+                          )} />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">{ws.name}</div>
+                            <div className="text-[11px] text-gray-500">{ws.path}</div>
+                          </div>
+                          {ws.id === selectedWorktree.id && (
+                            <Check className={cn('w-4 h-4 flex-shrink-0', color.text)} />
+                          )}
+                          <ChevronDown className="w-3 h-3 text-gray-500 flex-shrink-0 -rotate-90" />
+                        </button>
+
+                        {/* Branches flyout — anchored to this worktree row */}
+                        {hoveredWorktree?.id === ws.id && (
+                          <div
+                            className="absolute left-full top-0 ml-1 w-60 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl py-1 max-h-96 overflow-y-auto"
+                            onMouseEnter={() => setHoveredWorktree(ws)}
+                          >
+                            <div className="px-3 py-1.5">
+                              <span className={cn('text-[10px] font-semibold uppercase tracking-wider', color.text)}>
+                                Branches — {ws.name}
+                              </span>
+                            </div>
+                            {ws.branches.map((branch) => (
+                              <button
+                                key={branch.name}
+                                onClick={() => {
+                                  setSelectedWorktree(ws);
+                                  setSelectedBranch(branch.name);
+                                  setIsWorktreeSwitcherOpen(false);
+                                  setHoveredWorktree(null);
+                                }}
+                                className={cn(
+                                  'flex items-center gap-3 w-full px-3 py-2 text-left transition-colors duration-100',
+                                  branch.name === selectedBranch && ws.id === selectedWorktree.id
+                                    ? `${color.bg} text-white`
+                                    : 'text-gray-300 hover:bg-white/5 hover:text-white'
+                                )}
+                              >
+                                <GitBranch className={cn(
+                                  'w-4 h-4 flex-shrink-0',
+                                  branch.name === selectedBranch && ws.id === selectedWorktree.id ? color.text : 'text-gray-500'
+                                )} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium truncate">
+                                    {branch.name}
+                                    {branch.isDefault && (
+                                      <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">default</span>
+                                    )}
+                                  </div>
+                                  {branch.lastCommit && (
+                                    <div className="text-[11px] text-gray-500">{branch.lastCommit}</div>
+                                  )}
+                                </div>
+                                {branch.name === selectedBranch && ws.id === selectedWorktree.id && (
+                                  <Check className={cn('w-4 h-4 flex-shrink-0', color.text)} />
+                                )}
+                              </button>
+                            ))}
+                          </div>
                         )}
                       </div>
-                      {branch.name === selectedBranch && (
-                        <Check className="w-4 h-4 text-orange-400 flex-shrink-0" />
-                      )}
-                    </button>
-                  ))}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -608,7 +637,7 @@ function ProjectDetailPageContent() {
               />
             </PanelErrorBoundary>
           )}
-          {layoutState.panelOrder[0] === 'right' && (
+          {layoutState.panelOrder[0] === 'right' && !layoutState.rightSidebarCollapsed && (
             <PanelErrorBoundary key="right-panel" panelName="Right Panel">
               {layoutState.rightSidebarTab === 'chats' ? (
                 <ChatHistoryPanel
@@ -621,8 +650,6 @@ function ProjectDetailPageContent() {
                   projectId={project.id}
                   selectedIngestionNumbers={selectedIngestionNumbers}
                   onSelectIngestion={handleSelectIngestion}
-                  collapsed={layoutState.rightSidebarCollapsed}
-                  onToggleCollapse={toggleRightSidebar}
                   expandedWidth={rightSidebarWidth}
                 />
               )}
@@ -684,7 +711,7 @@ function ProjectDetailPageContent() {
               />
             </PanelErrorBoundary>
           )}
-          {layoutState.panelOrder[1] === 'right' && (
+          {layoutState.panelOrder[1] === 'right' && !layoutState.rightSidebarCollapsed && (
             <PanelErrorBoundary key="right-panel" panelName="Right Panel">
               {layoutState.rightSidebarTab === 'chats' ? (
                 <ChatHistoryPanel
@@ -697,8 +724,6 @@ function ProjectDetailPageContent() {
                   projectId={project.id}
                   selectedIngestionNumbers={selectedIngestionNumbers}
                   onSelectIngestion={handleSelectIngestion}
-                  collapsed={layoutState.rightSidebarCollapsed}
-                  onToggleCollapse={toggleRightSidebar}
                   expandedWidth={rightSidebarWidth}
                 />
               )}
@@ -760,7 +785,7 @@ function ProjectDetailPageContent() {
               />
             </PanelErrorBoundary>
           )}
-          {layoutState.panelOrder[2] === 'right' && (
+          {layoutState.panelOrder[2] === 'right' && !layoutState.rightSidebarCollapsed && (
             <PanelErrorBoundary key="right-panel" panelName="Right Panel">
               {layoutState.rightSidebarTab === 'chats' ? (
                 <ChatHistoryPanel
@@ -773,8 +798,6 @@ function ProjectDetailPageContent() {
                   projectId={project.id}
                   selectedIngestionNumbers={selectedIngestionNumbers}
                   onSelectIngestion={handleSelectIngestion}
-                  collapsed={layoutState.rightSidebarCollapsed}
-                  onToggleCollapse={toggleRightSidebar}
                   expandedWidth={rightSidebarWidth}
                 />
               )}

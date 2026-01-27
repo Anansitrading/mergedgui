@@ -106,7 +106,9 @@ export async function addIngestionEntry(
   filesRemoved: number = 0,
   displayName?: string,
   tokens: number = 0,
-  sourceType?: IngestionSourceType
+  sourceType?: IngestionSourceType,
+  compressed?: boolean,
+  neverCompress?: boolean
 ): Promise<IngestionEntry> {
   await new Promise(resolve => setTimeout(resolve, 300));
   const data = MOCK_COMPRESSION_DATA[contextId] || MOCK_COMPRESSION_DATA.default;
@@ -119,6 +121,8 @@ export async function addIngestionEntry(
     tokens,
     displayName,
     sourceType,
+    compressed,
+    neverCompress,
   };
   // Create new array reference so React detects the change
   data.history = [newEntry, ...data.history];

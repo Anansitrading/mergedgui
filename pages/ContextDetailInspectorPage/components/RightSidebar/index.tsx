@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Clock, Search, X, Pencil, Trash2, Loader2, Plus, FileText, GitBranch, AlignLeft, Tag, Archive, Shield, Eye } from 'lucide-react';
+import { Clock, Search, X, Pencil, Trash2, Loader2, Plus, FileText, GitBranch, AlignLeft, Tag, Archive, Shield, Eye } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
 import { useCompressionData } from '../../../../components/ContextDetailInspector/tabs/CompressionTab/hooks';
@@ -22,10 +22,7 @@ function getSourceIcon(sourceType?: IngestionSourceType) {
 // Constants
 // ==========================================
 
-const STORAGE_KEY = 'kijko_right_sidebar_collapsed';
 const EXPANDED_WIDTH = 280;
-const COLLAPSED_WIDTH = 48;
-const TRANSITION_DURATION = 300;
 
 // ==========================================
 // Debounce Hook
@@ -563,8 +560,6 @@ interface RightSidebarProps {
   selectedIngestionNumbers?: number[];
   onSelectIngestion?: (ingestionNumbers: number[]) => void;
   onNavigateToIngestion?: (ingestionNumber: number) => void;
-  collapsed?: boolean;
-  onToggleCollapse?: () => void;
   expandedWidth?: number;
 }
 
@@ -580,8 +575,6 @@ export function RightSidebar({
   selectedIngestionNumbers = [],
   onSelectIngestion,
   onNavigateToIngestion,
-  collapsed: externalCollapsed,
-  onToggleCollapse: externalToggleCollapse,
   expandedWidth,
 }: RightSidebarProps) {
   const {
@@ -611,18 +604,8 @@ export function RightSidebar({
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [internalCollapsed, setInternalCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved === 'true';
-    }
-    return false;
-  });
-
-  // Use external collapse state when provided, otherwise fall back to internal
-  const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
-
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
 
   // Debounced search
@@ -647,26 +630,10 @@ export function RightSidebar({
     setSelectedTagFilters([]);
   }, []);
 
-  // Persist collapse state (only when using internal state)
+  // Notify parent of width
   useEffect(() => {
-    if (externalCollapsed === undefined) {
-      localStorage.setItem(STORAGE_KEY, String(internalCollapsed));
-    }
-    onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : (expandedWidth ?? EXPANDED_WIDTH));
-  }, [isCollapsed, internalCollapsed, externalCollapsed, onWidthChange]);
-
-  // Notify parent of initial width
-  useEffect(() => {
-    onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : (expandedWidth ?? EXPANDED_WIDTH));
-  }, []);
-
-  const handleToggleCollapse = useCallback(() => {
-    if (externalToggleCollapse) {
-      externalToggleCollapse();
-    } else {
-      setInternalCollapsed(prev => !prev);
-    }
-  }, [externalToggleCollapse]);
+    onWidthChange?.(expandedWidth ?? EXPANDED_WIDTH);
+  }, [expandedWidth, onWidthChange]);
 
   // Filter ingestions
   const { filteredIngestions, hasIngestionsResults } = useMemo(() => {
@@ -695,6 +662,7 @@ export function RightSidebar({
   }, [ingestionHistory, debouncedSearch, selectedTagFilters]);
 
   const handleClearSearch = useCallback(() => {
+    setIsSearchOpen(false);
     setSearchQuery('');
   }, []);
 
@@ -752,45 +720,20 @@ export function RightSidebar({
     });
   }, [openIngestionModal]);
 
-  const resolvedExpandedWidth = expandedWidth ?? EXPANDED_WIDTH;
-  const currentWidth = isCollapsed ? COLLAPSED_WIDTH : resolvedExpandedWidth;
+  const resolvedWidth = expandedWidth ?? EXPANDED_WIDTH;
 
   return (
     <aside
       className={cn(
         'h-full bg-[#0d1220] border-l border-[#1e293b] flex flex-col overflow-hidden',
-        'transition-all ease-out',
         className
       )}
       style={{
-        width: currentWidth,
-        minWidth: currentWidth,
-        transitionDuration: `${TRANSITION_DURATION}ms`,
+        width: resolvedWidth,
+        minWidth: resolvedWidth,
         ...style,
       }}
     >
-      {isCollapsed ? (
-        // Collapsed state
-        <div
-          className="flex-1 flex flex-col items-center justify-center py-4 cursor-pointer hover:bg-white/5 transition-colors"
-          onClick={handleToggleCollapse}
-          role="button"
-          aria-label="Expand ingestions sidebar"
-        >
-          <ChevronLeft size={16} className="text-gray-400 mb-3" />
-          <div
-            className="text-[10px] font-bold uppercase tracking-wider text-gray-500"
-            style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
-          >
-            Ingestions
-          </div>
-          <div className="mt-2 text-[10px] text-gray-600">
-            {ingestionHistory.length}
-          </div>
-        </div>
-      ) : (
-        // Expanded state
-        <>
           {/* Hidden file input for ingestion */}
           <input
             ref={fileInputRef}
@@ -800,46 +743,40 @@ export function RightSidebar({
             accept=".ts,.tsx,.js,.jsx,.json,.md,.css,.html,.py,.txt"
           />
 
-          {/* Header */}
-          <div className="shrink-0 px-3 h-10 flex items-center justify-between border-b border-[#1e293b]">
-            <span className="text-xs text-slate-400 font-medium">
-              Ingestions
-            </span>
-            <button
-              onClick={handleToggleCollapse}
-              className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-              title="Collapse panel"
-              aria-label="Collapse panel"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {/* Search Input */}
-          <div className="shrink-0 px-3 py-2 border-b border-[#1e293b]">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none">
-                <Search className="text-gray-500" size={14} />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search ingestions..."
-                aria-label="Search ingestions"
-                className="w-full bg-white/5 border border-white/10 rounded-md py-1.5 pl-8 pr-8 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-gray-500"
-              />
-              {searchQuery && (
+          {/* Header with Search Toggle */}
+          <div className="px-3 h-10 border-b border-[#1e293b] flex items-center shrink-0">
+            {isSearchOpen ? (
+              <div className="flex items-center gap-2 w-full">
+                <div className="flex-1 relative">
+                  <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-500" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search ingestions..."
+                    aria-label="Search ingestions"
+                    autoFocus
+                    className="w-full bg-slate-800 border border-slate-700 rounded-md pl-7 pr-2 py-1 text-xs text-slate-200 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
                 <button
                   onClick={handleClearSearch}
-                  className="absolute inset-y-0 right-2 flex items-center"
+                  className="p-1 text-slate-500 hover:text-slate-300"
                 >
-                  <span className="p-0.5 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors">
-                    <X size={12} />
-                  </span>
+                  <X size={14} />
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between w-full">
+                <span className="text-xs text-slate-400 font-medium">Ingestions</span>
+                <button
+                  onClick={() => setIsSearchOpen(true)}
+                  className="p-1 text-slate-500 hover:text-slate-300 transition-colors"
+                >
+                  <Search size={14} />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Content */}
@@ -1010,8 +947,6 @@ export function RightSidebar({
             )}
           </div>
 
-        </>
-      )}
     </aside>
   );
 }

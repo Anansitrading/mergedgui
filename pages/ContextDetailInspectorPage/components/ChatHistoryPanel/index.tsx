@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { MessageSquare, Search, X, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
-import { useLayout } from '../../../../contexts/LayoutContext';
 import { formatRelativeTime } from '../../../../utils/chatHistoryStorage';
 import type { ChatHistoryItem } from '../../../../types/chatHistory';
 
@@ -337,7 +336,6 @@ export function ChatHistoryPanel({
   expandedWidth,
 }: ChatHistoryPanelProps) {
   const { state: chatState, loadChat, deleteChat, renameChat } = useChatHistory();
-  const { closeChatHistory } = useLayout();
 
   const [searchQuery, setSearchQuery] = useState('');
   const chatHistory = chatState.historyItems;
@@ -419,7 +417,7 @@ export function ChatHistoryPanel({
       }}
     >
       {/* Header */}
-      <div className="shrink-0 px-3 h-10 flex items-center justify-between border-b border-[#1e293b]">
+      <div className="shrink-0 px-3 h-10 flex items-center border-b border-[#1e293b]">
         <div className="flex items-center gap-1.5">
           <MessageSquare size={14} className="text-blue-400" />
           <span className="text-xs text-slate-400 font-medium">
@@ -431,14 +429,6 @@ export function ChatHistoryPanel({
             </span>
           )}
         </div>
-        <button
-          onClick={closeChatHistory}
-          className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-          title="Close chat history"
-          aria-label="Close chat history"
-        >
-          <X size={14} />
-        </button>
       </div>
 
       {/* Search Input */}

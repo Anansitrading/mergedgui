@@ -44,7 +44,7 @@ export function ChatPanel({
   const renameInputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const { state, createNewChat, closeTab, focusTab, renameChat } = useChatHistory();
-  const { state: layoutState, toggleChatInput, openChatHistory } = useLayout();
+  const { state: layoutState, toggleChatInput, openChatHistory, closeChatHistory } = useLayout();
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
@@ -206,9 +206,9 @@ export function ChatPanel({
           <Plus className="w-4 h-4" />
         </button>
 
-        {/* Chat History button */}
+        {/* Chat History toggle button */}
         <button
-          onClick={openChatHistory}
+          onClick={layoutState.rightSidebarTab === 'chats' && !layoutState.rightSidebarCollapsed ? closeChatHistory : openChatHistory}
           className={cn(
             'p-2 flex-shrink-0',
             layoutState.rightSidebarTab === 'chats' && !layoutState.rightSidebarCollapsed
@@ -217,7 +217,7 @@ export function ChatPanel({
             'transition-colors duration-150'
           )}
           title="Chat history"
-          aria-label="Show chat history"
+          aria-label="Toggle chat history"
         >
           <Clock className="w-4 h-4" />
         </button>
