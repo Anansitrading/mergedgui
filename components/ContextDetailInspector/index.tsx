@@ -14,11 +14,10 @@ import { useKeyboardShortcuts, useFocusTrap, useClickOutside } from './hooks';
 import { SearchModal, KnowledgeGraphModal, CompressionSettingsModal, LSPConfigModal, ChromaCodeConfigModal } from './modals';
 import { ConnectionStatus } from './common';
 import { OverviewTab } from './tabs/OverviewTab';
-import { CompressionTab } from './tabs/CompressionTab';
 import { KnowledgeBaseTab } from './tabs/KnowledgeBaseTab';
 import { KnowledgeGraphTab } from './tabs/KnowledgeGraphTab';
 import { ShareModal } from './modals/ShareModal';
-import { exportContextInfo, downloadOriginalFiles } from '../../services/export';
+import { exportContextInfo } from '../../services/export';
 import type { TabType, SearchResult, CompressionSettings, LSPConfig, ChromaCodeConfig } from '../../types/contextInspector';
 import { tabConfig } from '../../styles/contextInspector';
 
@@ -116,11 +115,6 @@ export function ContextDetailInspector() {
           await new Promise((resolve) => setTimeout(resolve, 1000));
           console.log('Summary regenerated');
           break;
-        case 'compression':
-          // Recompress (mock)
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          console.log('Recompression started');
-          break;
         case 'knowledgebase':
           // Refresh knowledge base (mock)
           await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -144,15 +138,6 @@ export function ContextDetailInspector() {
       case 'overview':
         // Export context info
         exportContextInfo(state.contextItem);
-        break;
-      case 'compression':
-        // Download original files
-        setIsActionLoading(true);
-        try {
-          await downloadOriginalFiles(state.contextItem.id);
-        } finally {
-          setIsActionLoading(false);
-        }
         break;
       case 'knowledgebase':
         // Export knowledge base
@@ -193,8 +178,6 @@ export function ContextDetailInspector() {
         return <OverviewTab contextItem={state.contextItem!} />;
       case 'knowledgebase':
         return <KnowledgeBaseTab contextId={state.contextItem!.id} />;
-      case 'compression':
-        return <CompressionTab contextItem={state.contextItem!} />;
       case 'knowledgegraph':
         return <KnowledgeGraphTab contextId={state.contextItem!.id} />;
       default:

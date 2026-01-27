@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Clock, MessageSquare, Search, X, Pencil, Trash2, Loader2, Plus, FileText, GitBranch, AlignLeft, Tag, Archive, Shield, Eye } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
+import { useLayout } from '../../../../contexts/LayoutContext';
 import { useIngestion, formatFileSizeFromBytes } from '../../../../contexts/IngestionContext';
 import { useCompressionData } from '../../../../components/ContextDetailInspector/tabs/CompressionTab/hooks';
 import { formatRelativeTime } from '../../../../utils/chatHistoryStorage';
@@ -26,16 +27,9 @@ function getSourceIcon(sourceType?: IngestionSourceType) {
 // ==========================================
 
 const STORAGE_KEY = 'kijko_right_sidebar_collapsed';
-const TAB_STORAGE_KEY = 'kijko_right_sidebar_active_tab';
 const EXPANDED_WIDTH = 280;
 const COLLAPSED_WIDTH = 48;
 const TRANSITION_DURATION = 300;
-
-// ==========================================
-// Tab Types
-// ==========================================
-
-type SidebarTab = 'chats' | 'ingestions';
 
 // ==========================================
 // Date Group Helpers
@@ -751,47 +745,6 @@ function EmptyState({ type, hasSearch }: { type: 'chats' | 'ingestions'; hasSear
 }
 
 // ==========================================
-// Tab Button Component
-// ==========================================
-
-interface TabButtonProps {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  count?: number;
-}
-
-function TabButton({ active, onClick, icon, label, count }: TabButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex-1 flex items-center justify-center gap-1.5 h-full text-xs font-medium transition-colors relative",
-        active
-          ? "text-white"
-          : "text-gray-500 hover:text-gray-300"
-      )}
-    >
-      {icon}
-      <span>{label}</span>
-      {count !== undefined && count > 0 && (
-        <span className={cn(
-          "text-[10px] px-1.5 py-0.5 rounded-full",
-          active ? "bg-blue-500/20 text-blue-400" : "bg-white/10 text-gray-400"
-        )}>
-          {count}
-        </span>
-      )}
-      {/* Active indicator */}
-      {active && (
-        <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-blue-500 rounded-full" />
-      )}
-    </button>
-  );
-}
-
-// ==========================================
 // Props Interface
 // ==========================================
 
@@ -825,6 +778,7 @@ export function RightSidebar({
   expandedWidth,
 }: RightSidebarProps) {
   const { state: chatState, loadChat, deleteChat, renameChat } = useChatHistory();
+  const { state: layoutState, closeChatHistory } = useLayout();
   const {
     history: ingestionHistory,
     metrics: compressionMetrics,
@@ -863,13 +817,7 @@ export function RightSidebar({
   // Use external collapse state when provided, otherwise fall back to internal
   const isCollapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
 
-  const [activeTab, setActiveTab] = useState<SidebarTab>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(TAB_STORAGE_KEY) as SidebarTab;
-      return saved === 'chats' || saved === 'ingestions' ? saved : 'chats';
-    }
-    return 'chats';
-  });
+  const activeTab = layoutState.rightSidebarTab;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
@@ -906,11 +854,6 @@ export function RightSidebar({
     }
     onWidthChange?.(isCollapsed ? COLLAPSED_WIDTH : (expandedWidth ?? EXPANDED_WIDTH));
   }, [isCollapsed, internalCollapsed, externalCollapsed, onWidthChange]);
-
-  // Persist active tab
-  useEffect(() => {
-    localStorage.setItem(TAB_STORAGE_KEY, activeTab);
-  }, [activeTab]);
 
   // Notify parent of initial width
   useEffect(() => {
@@ -1094,17 +1037,17 @@ export function RightSidebar({
           className="flex-1 flex flex-col items-center justify-center py-4 cursor-pointer hover:bg-white/5 transition-colors"
           onClick={handleToggleCollapse}
           role="button"
-          aria-label="Expand history sidebar"
+          aria-label="Expand ingestions sidebar"
         >
           <ChevronLeft size={16} className="text-gray-400 mb-3" />
           <div
             className="text-[10px] font-bold uppercase tracking-wider text-gray-500"
             style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
           >
-            History
+            Ingestions
           </div>
           <div className="mt-2 text-[10px] text-gray-600">
-            {chatHistory.length + ingestionHistory.length}
+            {ingestionHistory.length}
           </div>
         </div>
       ) : (
@@ -1121,37 +1064,43 @@ export function RightSidebar({
 
           {/* Header with collapse button - matches Explorer row style */}
           <div className="shrink-0 px-3 h-10 flex items-center justify-between border-b border-[#1e293b]">
-            <span className="text-xs text-slate-400 font-medium">
-              History
-            </span>
-            <button
-              onClick={handleToggleCollapse}
-              className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
-              title="Collapse panel"
-              aria-label="Collapse History panel"
-            >
-              <ChevronRight size={14} />
-            </button>
-          </div>
-
-          {/* Tab Navigation */}
-          <div className="shrink-0 px-2 h-10 border-b border-[#1e293b]">
-            <div className="flex h-full">
-              <TabButton
-                active={activeTab === 'chats'}
-                onClick={() => setActiveTab('chats')}
-                icon={<MessageSquare size={14} />}
-                label="Chats"
-                count={chatHistory.length}
-              />
-              <TabButton
-                active={activeTab === 'ingestions'}
-                onClick={() => setActiveTab('ingestions')}
-                icon={<Clock size={14} />}
-                label="Ingestions"
-                count={ingestionHistory.length}
-              />
-            </div>
+            {activeTab === 'chats' ? (
+              <>
+                <div className="flex items-center gap-1.5">
+                  <MessageSquare size={14} className="text-blue-400" />
+                  <span className="text-xs text-slate-400 font-medium">
+                    Chat History
+                  </span>
+                  {chatHistory.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400">
+                      {chatHistory.length}
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={closeChatHistory}
+                  className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                  title="Close chat history"
+                  aria-label="Close chat history"
+                >
+                  <X size={14} />
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-slate-400 font-medium">
+                  Ingestions
+                </span>
+                <button
+                  onClick={handleToggleCollapse}
+                  className="p-1.5 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                  title="Collapse panel"
+                  aria-label="Collapse panel"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Search Input */}

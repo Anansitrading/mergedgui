@@ -1,11 +1,13 @@
 import { createContext, useContext, useCallback, useState, useEffect, type ReactNode } from 'react';
 
 export type PanelPosition = 'left' | 'center' | 'right';
+export type RightSidebarTab = 'chats' | 'ingestions';
 
 interface LayoutState {
   leftSidebarCollapsed: boolean;
   chatInputCollapsed: boolean;
   rightSidebarCollapsed: boolean;
+  rightSidebarTab: RightSidebarTab;
   panelOrder: [PanelPosition, PanelPosition, PanelPosition];
 }
 
@@ -14,6 +16,8 @@ interface LayoutContextValue {
   toggleLeftSidebar: () => void;
   toggleChatInput: () => void;
   toggleRightSidebar: () => void;
+  openChatHistory: () => void;
+  closeChatHistory: () => void;
   setPanelOrder: (order: [PanelPosition, PanelPosition, PanelPosition]) => void;
 }
 
@@ -24,6 +28,7 @@ const DEFAULT_STATE: LayoutState = {
   leftSidebarCollapsed: false,
   chatInputCollapsed: false,
   rightSidebarCollapsed: false,
+  rightSidebarTab: 'ingestions',
   panelOrder: ['left', 'center', 'right'],
 };
 
@@ -71,7 +76,30 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleRightSidebar = useCallback(() => {
-    setState((prev) => ({ ...prev, rightSidebarCollapsed: !prev.rightSidebarCollapsed }));
+    setState((prev) => {
+      const willCollapse = !prev.rightSidebarCollapsed;
+      return {
+        ...prev,
+        rightSidebarCollapsed: willCollapse,
+        // Reset to ingestions when collapsing
+        rightSidebarTab: willCollapse ? 'ingestions' : prev.rightSidebarTab,
+      };
+    });
+  }, []);
+
+  const openChatHistory = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      rightSidebarCollapsed: false,
+      rightSidebarTab: 'chats',
+    }));
+  }, []);
+
+  const closeChatHistory = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      rightSidebarTab: 'ingestions',
+    }));
   }, []);
 
   const setPanelOrder = useCallback((order: [PanelPosition, PanelPosition, PanelPosition]) => {
@@ -79,7 +107,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <LayoutContext.Provider value={{ state, toggleLeftSidebar, toggleChatInput, toggleRightSidebar, setPanelOrder }}>
+    <LayoutContext.Provider value={{ state, toggleLeftSidebar, toggleChatInput, toggleRightSidebar, openChatHistory, closeChatHistory, setPanelOrder }}>
       {children}
     </LayoutContext.Provider>
   );

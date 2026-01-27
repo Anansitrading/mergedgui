@@ -10,8 +10,7 @@ interface UseModalKeyboardOptions {
 const TAB_MAP: Record<number, TabType> = {
   1: 'overview',
   2: 'knowledgebase',
-  3: 'compression',
-  4: 'knowledgegraph',
+  3: 'knowledgegraph',
 };
 
 /**

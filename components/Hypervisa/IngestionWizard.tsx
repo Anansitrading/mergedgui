@@ -12,9 +12,20 @@ import {
   FileX,
   Palette,
   RotateCcw,
+  Eye,
+  FileText,
+  GitBranch,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
-import { IngestionConfig, ChromacodeConfig, CHROMACODE_DEFAULTS, CHROMACODE_LABELS } from "../../types";
+import {
+  IngestionConfig,
+  ChromacodeConfig,
+  CHROMACODE_DEFAULTS,
+  CHROMACODE_LABELS,
+  DOCUMENTATION_TAG_SUGGESTIONS,
+  KNOWLEDGE_GRAPH_TAG_SUGGESTIONS,
+  calculateVisibilityIndex,
+} from "../../types";
 
 // ============================================================================
 // Types
@@ -63,6 +74,8 @@ function getInitialState(file: { id: string; name: string }): WizardState {
       processingMode: "none",
       codebase: { type: "existing", name: "" },
       tags: [],
+      documentationTags: [],
+      knowledgeGraphTags: [],
       description: "",
       neverCompress: false,
       chromacode: { ...CHROMACODE_DEFAULTS },
@@ -121,6 +134,12 @@ function canProceed(
     case 2:
       if (!config.displayName.trim()) {
         errors.displayName = "Display name is required";
+      }
+      if (config.processingMode === "compress" && config.chromacode) {
+        const visibility = calculateVisibilityIndex(config.chromacode);
+        if (visibility < 75) {
+          errors.visibility = `Visibility Index is ${visibility}% — must be at least 75%`;
+        }
       }
       break;
     case 3:
@@ -186,18 +205,30 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 }
 
 // ============================================================================
-// Tag Input
+// Suggestive Tag Input
 // ============================================================================
 
-function TagInput({
+function SuggestiveTagInput({
   value,
   onChange,
+  suggestions,
+  placeholder,
 }: {
   value: string[];
   onChange: (tags: string[]) => void;
+  suggestions: string[];
+  placeholder?: string;
 }) {
   const [inputValue, setInputValue] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filteredSuggestions = suggestions.filter(
+    (s) =>
+      !value.includes(s) &&
+      (inputValue === "" || s.toLowerCase().includes(inputValue.toLowerCase()))
+  );
 
   const addTag = (tag: string) => {
     const trimmed = tag.trim().toLowerCase();
@@ -217,42 +248,89 @@ function TagInput({
       addTag(inputValue);
     } else if (e.key === "Backspace" && !inputValue && value.length > 0) {
       removeTag(value.length - 1);
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
     }
   };
 
+  // Close suggestions on outside click
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div
-      onClick={() => inputRef.current?.focus()}
-      className="min-h-[42px] flex flex-wrap gap-2 p-2 bg-slate-800 border border-slate-700 rounded-lg cursor-text focus-within:border-blue-500 transition-colors"
-    >
-      {value.map((tag, index) => (
-        <span
-          key={index}
-          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700 text-slate-200 text-xs rounded-md"
-        >
-          {tag}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeTag(index);
-            }}
-            className="text-slate-400 hover:text-red-400"
+    <div ref={containerRef} className="relative">
+      <div
+        onClick={() => {
+          inputRef.current?.focus();
+          setShowSuggestions(true);
+        }}
+        className="min-h-[42px] flex flex-wrap gap-2 p-2 bg-slate-800 border border-slate-700 rounded-lg cursor-text focus-within:border-blue-500 transition-colors"
+      >
+        {value.map((tag, index) => (
+          <span
+            key={index}
+            className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700 text-slate-200 text-xs rounded-md"
           >
-            <X size={12} />
-          </button>
-        </span>
-      ))}
-      <input
-        ref={inputRef}
-        type="text"
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={() => inputValue && addTag(inputValue)}
-        placeholder={value.length === 0 ? "Type and press Enter..." : ""}
-        className="flex-1 min-w-[100px] bg-transparent border-none text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
-      />
+            {tag}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeTag(index);
+              }}
+              className="text-slate-400 hover:text-red-400"
+            >
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setShowSuggestions(true);
+          }}
+          onFocus={() => setShowSuggestions(true)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => {
+            // Delay to allow suggestion click
+            setTimeout(() => {
+              if (inputValue) addTag(inputValue);
+            }, 150);
+          }}
+          placeholder={value.length === 0 ? (placeholder ?? "Type and press Enter...") : ""}
+          className="flex-1 min-w-[100px] bg-transparent border-none text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none"
+        />
+      </div>
+
+      {/* Suggestion dropdown */}
+      {showSuggestions && filteredSuggestions.length > 0 && (
+        <div className="absolute z-10 mt-1 w-full max-h-[140px] overflow-y-auto bg-slate-800 border border-slate-600 rounded-lg shadow-xl">
+          {filteredSuggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                addTag(suggestion);
+                inputRef.current?.focus();
+              }}
+              className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 hover:text-slate-100 transition-colors"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -379,18 +457,22 @@ function Step1ProcessingMode({
 
 function Step2FileMetadata({
   displayName,
-  tags,
+  documentationTags,
+  knowledgeGraphTags,
   onDisplayNameChange,
-  onTagsChange,
+  onDocumentationTagsChange,
+  onKnowledgeGraphTagsChange,
   errors,
   showChromacode,
   chromacode,
   onChromacodeChange,
 }: {
   displayName: string;
-  tags: string[];
+  documentationTags: string[];
+  knowledgeGraphTags: string[];
   onDisplayNameChange: (name: string) => void;
-  onTagsChange: (tags: string[]) => void;
+  onDocumentationTagsChange: (tags: string[]) => void;
+  onKnowledgeGraphTagsChange: (tags: string[]) => void;
   errors: Record<string, string>;
   showChromacode: boolean;
   chromacode: ChromacodeConfig | undefined;
@@ -403,6 +485,9 @@ function Step2FileMetadata({
   const hasCustomColors = chromacode
     ? chromacodeKeys.some((k) => chromacode[k] !== CHROMACODE_DEFAULTS[k])
     : false;
+
+  const visibilityIndex = chromacode ? calculateVisibilityIndex(chromacode) : 75;
+  const visibilityBelowThreshold = visibilityIndex < 75;
 
   const handleColorChange = (key: keyof ChromacodeConfig, hex: string) => {
     const current = chromacode ?? { ...CHROMACODE_DEFAULTS };
@@ -450,12 +535,32 @@ function Step2FileMetadata({
         )}
       </div>
 
-      {/* Tags */}
+      {/* Documentation Tags */}
       <div className="space-y-1.5">
-        <label className="text-xs text-slate-300 font-medium">
-          Tags <span className="text-slate-500">(optional)</span>
+        <label className="text-xs text-slate-300 font-medium flex items-center gap-1.5">
+          <FileText size={12} className="text-slate-400" />
+          Documentation Tags
         </label>
-        <TagInput value={tags} onChange={onTagsChange} />
+        <SuggestiveTagInput
+          value={documentationTags}
+          onChange={onDocumentationTagsChange}
+          suggestions={DOCUMENTATION_TAG_SUGGESTIONS}
+          placeholder="Type or select documentation tags..."
+        />
+      </div>
+
+      {/* KnowledgeGraph Tags */}
+      <div className="space-y-1.5">
+        <label className="text-xs text-slate-300 font-medium flex items-center gap-1.5">
+          <GitBranch size={12} className="text-slate-400" />
+          KnowledgeGraph Tags
+        </label>
+        <SuggestiveTagInput
+          value={knowledgeGraphTags}
+          onChange={onKnowledgeGraphTagsChange}
+          suggestions={KNOWLEDGE_GRAPH_TAG_SUGGESTIONS}
+          placeholder="Type or select knowledge graph tags..."
+        />
       </div>
 
       {/* Chromacode */}
@@ -570,6 +675,60 @@ function Step2FileMetadata({
               )}
             </div>
           )}
+
+          {/* Visibility Index */}
+          <div className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg border",
+            visibilityBelowThreshold
+              ? "bg-red-950/30 border-red-500/40"
+              : "bg-slate-800/50 border-slate-700"
+          )}>
+            <Eye size={14} className={visibilityBelowThreshold ? "text-red-400" : "text-slate-400"} />
+            <div className="flex-1 min-w-0">
+              <span className={cn(
+                "text-xs font-medium",
+                visibilityBelowThreshold ? "text-red-300" : "text-slate-300"
+              )}>
+                Visibility Index
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="w-20 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-300",
+                  visibilityBelowThreshold
+                    ? "bg-red-500"
+                    : visibilityIndex >= 85
+                    ? "bg-emerald-500"
+                    : "bg-blue-500"
+                )}
+                style={{ width: `${visibilityIndex}%` }}
+              />
+            </div>
+            <span className={cn(
+              "text-xs font-mono font-medium min-w-[36px] text-right",
+              visibilityBelowThreshold
+                ? "text-red-400"
+                : visibilityIndex >= 85
+                ? "text-emerald-400"
+                : "text-blue-400"
+            )}>
+              {visibilityIndex}%
+            </span>
+          </div>
+
+          {/* Visibility warning */}
+          {visibilityBelowThreshold && (
+            <div className="flex items-start gap-2 px-3 py-2 bg-red-950/20 border border-red-500/30 rounded-lg">
+              <AlertTriangle size={14} className="text-red-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-red-300">
+                Visibility Index is below 75%. The selected colors are too similar,
+                making it difficult to distinguish between code elements. Adjust your
+                colors for better readability.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -606,12 +765,15 @@ function Step3Confirmation({
       ? "Compress + Chromacode (custom)"
       : "Compress + Chromacode";
 
+  const visibilityIndex = config.chromacode ? calculateVisibilityIndex(config.chromacode) : 75;
+
   const summaryItems = [
     { label: "File", value: config.fileName },
     { label: "Display Name", value: config.displayName },
     { label: "Processing", value: processingLabel },
     { label: "Project", value: projectName },
-    { label: "Tags", value: config.tags?.join(", ") || "None" },
+    { label: "Doc Tags", value: config.documentationTags?.join(", ") || "None" },
+    { label: "KG Tags", value: config.knowledgeGraphTags?.join(", ") || "None" },
   ];
 
   return (
@@ -651,19 +813,30 @@ function Step3Confirmation({
             <span className="text-xs text-slate-400 font-mono uppercase block mb-2">
               Chromacode
             </span>
-            <div className="flex gap-1.5">
-              {(Object.keys(CHROMACODE_LABELS) as (keyof ChromacodeConfig)[]).map((key) => (
-                <div key={key} className="flex flex-col items-center gap-1">
-                  <div
-                    className="w-4 h-4 rounded-full border border-slate-600"
-                    style={{ backgroundColor: config.chromacode![key] }}
-                    title={`${CHROMACODE_LABELS[key].label}: ${config.chromacode![key]}`}
-                  />
-                  <span className="text-[8px] text-slate-500 leading-none">
-                    {CHROMACODE_LABELS[key].label.split(' ')[0]}
-                  </span>
-                </div>
-              ))}
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5">
+                {(Object.keys(CHROMACODE_LABELS) as (keyof ChromacodeConfig)[]).map((key) => (
+                  <div key={key} className="flex flex-col items-center gap-1">
+                    <div
+                      className="w-4 h-4 rounded-full border border-slate-600"
+                      style={{ backgroundColor: config.chromacode![key] }}
+                      title={`${CHROMACODE_LABELS[key].label}: ${config.chromacode![key]}`}
+                    />
+                    <span className="text-[8px] text-slate-500 leading-none">
+                      {CHROMACODE_LABELS[key].label.split(' ')[0]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="ml-auto flex items-center gap-2">
+                <Eye size={12} className="text-slate-400" />
+                <span className={cn(
+                  "text-xs font-mono font-medium",
+                  visibilityIndex >= 75 ? "text-blue-400" : "text-red-400"
+                )}>
+                  {visibilityIndex}%
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -803,12 +976,16 @@ export function IngestionWizard({
           {state.currentStep === 2 && (
             <Step2FileMetadata
               displayName={state.config.displayName}
-              tags={state.config.tags || []}
+              documentationTags={state.config.documentationTags || []}
+              knowledgeGraphTags={state.config.knowledgeGraphTags || []}
               onDisplayNameChange={(displayName) =>
                 dispatch({ type: "UPDATE_CONFIG", payload: { displayName } })
               }
-              onTagsChange={(tags) =>
-                dispatch({ type: "UPDATE_CONFIG", payload: { tags } })
+              onDocumentationTagsChange={(documentationTags) =>
+                dispatch({ type: "UPDATE_CONFIG", payload: { documentationTags } })
+              }
+              onKnowledgeGraphTagsChange={(knowledgeGraphTags) =>
+                dispatch({ type: "UPDATE_CONFIG", payload: { knowledgeGraphTags } })
               }
               errors={state.validationErrors}
               showChromacode={state.config.processingMode === "compress"}

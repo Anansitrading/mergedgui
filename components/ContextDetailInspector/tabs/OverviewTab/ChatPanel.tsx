@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
-import { ThumbsUp, ThumbsDown, Copy, Bot, Plus, X, Pencil, MessageSquare } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Copy, Bot, Plus, X, Pencil, MessageSquare, Clock } from 'lucide-react';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { cn } from '../../../../utils/cn';
@@ -44,7 +44,7 @@ export function ChatPanel({
   const renameInputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const { state, createNewChat, closeTab, focusTab, renameChat } = useChatHistory();
-  const { state: layoutState, toggleChatInput } = useLayout();
+  const { state: layoutState, toggleChatInput, openChatHistory } = useLayout();
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
@@ -204,6 +204,22 @@ export function ChatPanel({
           aria-label="Start new chat"
         >
           <Plus className="w-4 h-4" />
+        </button>
+
+        {/* Chat History button */}
+        <button
+          onClick={openChatHistory}
+          className={cn(
+            'p-2 flex-shrink-0',
+            layoutState.rightSidebarTab === 'chats' && !layoutState.rightSidebarCollapsed
+              ? 'text-blue-400 bg-blue-500/10'
+              : 'text-gray-400 hover:text-white hover:bg-white/10',
+            'transition-colors duration-150'
+          )}
+          title="Chat history"
+          aria-label="Show chat history"
+        >
+          <Clock className="w-4 h-4" />
         </button>
       </div>
 

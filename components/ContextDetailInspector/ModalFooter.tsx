@@ -25,10 +25,6 @@ const FOOTER_BUTTONS: Record<TabType, { primary: FooterButtonConfig; secondary: 
     primary: { label: 'New Ingestion', icon: Database, variant: 'primary' },
     secondary: { label: 'Export', icon: Download, variant: 'secondary' },
   },
-  compression: {
-    primary: { label: 'Recompress', icon: RefreshCw, variant: 'primary' },
-    secondary: { label: 'View Details', icon: Eye, variant: 'secondary' },
-  },
   knowledgegraph: {
     primary: { label: 'Rebuild Graph', icon: GitBranch, variant: 'primary' },
     secondary: { label: 'View Graph', icon: Eye, variant: 'secondary' },

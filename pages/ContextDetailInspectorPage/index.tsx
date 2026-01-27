@@ -22,12 +22,12 @@ import { LayoutProvider, useLayout } from '../../contexts/LayoutContext';
 import { HeaderLayoutControls } from '../../components/HeaderLayoutControls';
 import { cn } from '../../utils/cn';
 import { tabConfig } from '../../styles/contextInspector';
-import { Loader2, AlertCircle, Share2, ArrowLeft, Wrench, ChevronDown, Check, GitBranch, FolderOpen } from 'lucide-react';
+import { Loader2, AlertCircle, Share2, ArrowLeft, ChevronDown, Check, GitBranch, FolderOpen } from 'lucide-react';
 import type { TabType } from '../../types/contextInspector';
 import type { Notification, SettingsSection } from '../../types/settings';
 
 // Valid tab values
-const VALID_TABS: TabType[] = ['overview', 'knowledgebase', 'compression', 'knowledgegraph'];
+const VALID_TABS: TabType[] = ['overview', 'knowledgebase', 'knowledgegraph'];
 
 // Mock workspace data
 const MOCK_WORKSPACES: WorkspaceWithBranches[] = [
@@ -207,8 +207,7 @@ function ProjectDetailPageContent() {
         const tabMap: Record<string, TabType> = {
           '1': 'overview',
           '2': 'knowledgebase',
-          '3': 'compression',
-          '4': 'knowledgegraph',
+          '3': 'knowledgegraph',
         };
         const tab = tabMap[e.key];
         if (tab) {
@@ -349,7 +348,8 @@ function ProjectDetailPageContent() {
             <button
               onClick={() => navigate('/')}
               className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors duration-150"
-              aria-label="Back to project dashboard"
+              aria-label="Back to dashboard"
+              title="Back to dashboard"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -359,19 +359,16 @@ function ProjectDetailPageContent() {
               <button
                 onClick={() => setIsWorkspaceSwitcherOpen(!isWorkspaceSwitcherOpen)}
                 className={cn(
-                  'flex items-center gap-1.5 px-1 py-0.5 rounded-md transition-colors duration-150',
+                  'flex items-center gap-1 px-1.5 py-0.5 rounded-md transition-colors duration-150',
                   'hover:bg-white/10',
                   isWorkspaceSwitcherOpen && 'bg-white/10'
                 )}
               >
-                <div className="flex-shrink-0 w-5 h-5 rounded bg-blue-500/20 flex items-center justify-center">
-                  <Wrench className="w-3 h-3 text-blue-400" />
-                </div>
-                <span className="text-xs font-medium text-white truncate max-w-[180px]">
+                <span className="text-sm font-medium text-gray-300 truncate max-w-[140px]">
                   {project.name}
                 </span>
                 <ChevronDown className={cn(
-                  'w-3 h-3 text-gray-400 flex-shrink-0 transition-transform duration-150',
+                  'w-3 h-3 text-gray-500 flex-shrink-0 transition-transform duration-150',
                   isWorkspaceSwitcherOpen && 'rotate-180'
                 )} />
               </button>

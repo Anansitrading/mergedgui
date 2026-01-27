@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '../../../../utils/cn';
 import { PageOverviewTab } from './PageOverviewTab';
-import { CompressionTab } from '../../../../components/ContextDetailInspector/tabs/CompressionTab';
 import { KnowledgeBaseTab } from '../../../../components/ContextDetailInspector/tabs/KnowledgeBaseTab';
 import { KnowledgeGraphTab } from '../../../../components/ContextDetailInspector/tabs/KnowledgeGraphTab';
 import type { TabType, ContextItem } from '../../../../types/contextInspector';
@@ -57,8 +56,6 @@ export function MainContent({
         return <PageOverviewTab contextItem={contextItem} />;
       case 'knowledgebase':
         return <KnowledgeBaseTab contextId={contextItem.id} selectedIngestionNumbers={selectedIngestionNumbers} />;
-      case 'compression':
-        return <CompressionTab contextItem={contextItem} />;
       case 'knowledgegraph':
         return <KnowledgeGraphTab contextId={contextItem.id} onViewFullGraph={onViewFullGraph} />;
       default:

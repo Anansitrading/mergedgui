@@ -119,23 +119,18 @@ export const animations = {
   slideOutDown: 'slideOutDown 150ms ease-in',
 } as const;
 
-// Tab configuration (Users tab removed - sharing via header; Changelog moved to master-detail in RightSidebar)
+// Tab configuration (Users tab removed - sharing via header; Changelog moved to master-detail in RightSidebar; Hypervisa merged into Knowledge Base)
 export const tabConfig = [
   { id: 'overview', label: 'Chat', shortcut: 1 },
   { id: 'knowledgebase', label: 'Knowledge Base', shortcut: 2 },
-  { id: 'compression', label: 'Hypervisa', shortcut: 3 },
-  { id: 'knowledgegraph', label: 'Knowledge Graph', shortcut: 4 },
+  { id: 'knowledgegraph', label: 'Knowledge Graph', shortcut: 3 },
 ] as const;
 
-// Footer button configurations per tab (users removed - sharing via header; changelog moved to master-detail)
+// Footer button configurations per tab (users removed - sharing via header; changelog moved to master-detail; compression merged into knowledgebase)
 export const footerConfig = {
   overview: {
     primary: { label: 'Open Chat', action: 'openChat' },
     secondary: { label: 'Copy Summary', action: 'copySummary' },
-  },
-  compression: {
-    primary: { label: 'Recompress', action: 'recompress' },
-    secondary: { label: 'View Details', action: 'viewDetails' },
   },
   knowledgebase: {
     primary: { label: 'New Ingestion', action: 'newIngestion' },

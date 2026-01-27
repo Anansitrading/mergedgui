@@ -22,6 +22,9 @@ import {
 import { cn } from '../../../../utils/cn';
 import { formatDateTime, formatFileChange } from '../../../../utils/formatting';
 import { useCompressionData } from '../CompressionTab/hooks';
+import { CompressionProgress } from '../CompressionTab/CompressionProgress';
+import { CompressionStats } from '../CompressionTab/CompressionStats';
+import { CompressionFileLists } from '../CompressionTab/CompressionFileLists';
 import type { IngestionEntry, IngestionSourceType } from '../../../../types/contextInspector';
 
 function getSourceIcon(sourceType?: IngestionSourceType) {
@@ -247,6 +250,9 @@ export function KnowledgeBaseTab({ contextId, selectedIngestionNumbers = [] }: K
   const {
     metrics,
     history,
+    compressedFiles,
+    pendingFiles,
+    neverCompressFiles,
     isLoading,
     error,
     refresh,
@@ -456,8 +462,26 @@ export function KnowledgeBaseTab({ contextId, selectedIngestionNumbers = [] }: K
         </div>
       </div>
 
-      {/* Ingestion Sections */}
+      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-3">
+        {/* Compression Stats */}
+        {metrics && (
+          <div className="space-y-3 mb-5 pb-5 border-b border-white/5">
+            <CompressionProgress
+              savingsPercent={metrics.savingsPercent}
+              ratio={metrics.ratio}
+              costSavings={metrics.costSavings}
+            />
+            <CompressionStats metrics={metrics} tokensSaved={metrics.originalTokens - metrics.compressedTokens} />
+            <CompressionFileLists
+              compressedFiles={compressedFiles}
+              pendingFiles={pendingFiles}
+              neverCompressFiles={neverCompressFiles}
+            />
+          </div>
+        )}
+
+        {/* Ingestion Sections */}
         {totalFiltered === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Clock className="w-8 h-8 text-gray-600 mb-2" />
