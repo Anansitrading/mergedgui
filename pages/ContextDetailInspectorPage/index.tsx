@@ -18,6 +18,8 @@ import { KnowledgeGraphFloatingWindow } from '../../components/ContextDetailInsp
 import { useNotifications } from '../../hooks/useNotifications';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { useChatHistory } from '../../contexts/ChatHistoryContext';
+import { LayoutProvider, useLayout } from '../../contexts/LayoutContext';
+import { HeaderLayoutControls } from '../../components/HeaderLayoutControls';
 import { cn } from '../../utils/cn';
 import { tabConfig } from '../../styles/contextInspector';
 import { Loader2, AlertCircle, Share2, ArrowLeft, Wrench, ChevronDown, Check } from 'lucide-react';
@@ -27,7 +29,7 @@ import type { Notification, SettingsSection } from '../../types/settings';
 // Valid tab values
 const VALID_TABS: TabType[] = ['overview', 'knowledgebase', 'compression', 'knowledgegraph'];
 
-export function ProjectDetailPage() {
+function ProjectDetailPageContent() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,8 +37,11 @@ export function ProjectDetailPage() {
   const { openIngestionModal, openIngestionModalEmpty } = useIngestion();
   const { createNewChat, addMessage } = useChatHistory();
 
+  // Layout context
+  const { state: layoutState, toggleLeftSidebar, toggleRightSidebar } = useLayout();
+
   // Selected ingestion for master-detail pattern
-  const [selectedIngestionNumber, setSelectedIngestionNumber] = useState<number | null>(null);
+  const [selectedIngestionNumbers, setSelectedIngestionNumbers] = useState<number[]>([]);
 
   // Tab state - controlled from here, synced with URL
   const tabParam = searchParams.get('tab') as TabType | null;
@@ -71,24 +76,23 @@ export function ProjectDetailPage() {
   const projectSwitcherRef = useRef<HTMLDivElement>(null);
   const { projects } = useProjects();
 
-  // Left sidebar resizing
+  // Left sidebar resizing (delta-based for panel reorder support)
   const [sidebarWidth, setSidebarWidth] = useState(240);
-  const isResizingRef = useRef(false);
+  const leftResizeStartRef = useRef({ x: 0, width: 240 });
 
-  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleLeftResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    isResizingRef.current = true;
+    leftResizeStartRef.current = { x: e.clientX, width: sidebarWidth };
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
     const onMouseMove = (ev: MouseEvent) => {
-      if (!isResizingRef.current) return;
-      const newWidth = Math.min(Math.max(ev.clientX, 180), 500);
+      const delta = ev.clientX - leftResizeStartRef.current.x;
+      const newWidth = Math.min(Math.max(leftResizeStartRef.current.width + delta, 180), 500);
       setSidebarWidth(newWidth);
     };
 
     const onMouseUp = () => {
-      isResizingRef.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       document.removeEventListener('mousemove', onMouseMove);
@@ -97,7 +101,35 @@ export function ProjectDetailPage() {
 
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
-  }, []);
+  }, [sidebarWidth]);
+
+  // Right sidebar resizing (delta-based)
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(280);
+  const rightResizeStartRef = useRef({ x: 0, width: 280 });
+
+  const handleRightResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    rightResizeStartRef.current = { x: e.clientX, width: rightSidebarWidth };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMouseMove = (ev: MouseEvent) => {
+      // Dragging left = wider right sidebar
+      const delta = rightResizeStartRef.current.x - ev.clientX;
+      const newWidth = Math.min(Math.max(rightResizeStartRef.current.width + delta, 180), 500);
+      setRightSidebarWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [rightSidebarWidth]);
 
   // Notifications
   const {
@@ -124,7 +156,7 @@ export function ProjectDetailPage() {
   // Tab change handler - updates both state and URL
   const handleTabChange = useCallback((tab: TabType) => {
     setActiveTab(tab);
-    setSelectedIngestionNumber(null);
+    setSelectedIngestionNumbers([]);
     setSearchParams({ tab }, { replace: true });
   }, [setSearchParams]);
 
@@ -189,14 +221,9 @@ export function ProjectDetailPage() {
     setSearchParams(searchParams, { replace: true });
   }, [openIngestionParam, project, openIngestionModal, openIngestionModalEmpty, searchParams, setSearchParams]);
 
-  // Handler for selecting an ingestion from the right sidebar
-  const handleSelectIngestion = useCallback((ingestionNumber: number | null) => {
-    setSelectedIngestionNumber(ingestionNumber);
-  }, []);
-
-  // Handler for closing ingestion detail view
-  const handleCloseIngestionDetail = useCallback(() => {
-    setSelectedIngestionNumber(null);
+  // Handler for selecting ingestions from the right sidebar
+  const handleSelectIngestion = useCallback((ingestionNumbers: number[]) => {
+    setSelectedIngestionNumbers(ingestionNumbers);
   }, []);
 
   // Handler for opening Knowledge Graph full view + activating a KG chat session
@@ -225,6 +252,11 @@ export function ProjectDetailPage() {
     // Switch to Overview tab so the chat panel is visible
     handleTabChange('overview');
   }, [createNewChat, addMessage, handleTabChange]);
+
+  // Panel order indices for CSS order
+  const leftOrder = layoutState.panelOrder.indexOf('left');
+  const centerOrder = layoutState.panelOrder.indexOf('center');
+  const rightOrder = layoutState.panelOrder.indexOf('right');
 
   // Loading state
   if (isLoading) {
@@ -263,6 +295,9 @@ export function ProjectDetailPage() {
     );
   }
 
+  // Resolved widths based on collapse state
+  const leftWidth = layoutState.leftSidebarCollapsed ? 48 : sidebarWidth;
+
   // Main layout
   return (
     <>
@@ -270,7 +305,7 @@ export function ProjectDetailPage() {
         {/* Unified Top Bar (Row 1 - h-12) spanning full width */}
         <header className="h-12 shrink-0 flex items-center border-b border-[#1e293b] bg-[#0d1220]">
           {/* Left section - Back + Project name (same width as left sidebar) */}
-          <div className="shrink-0 h-full flex items-center gap-2 px-3 border-r border-[#1e293b]" style={{ width: sidebarWidth }}>
+          <div className="shrink-0 h-full flex items-center gap-2 px-3 border-r border-[#1e293b]" style={{ width: leftWidth }}>
             <button
               onClick={() => navigate('/')}
               className="flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors duration-150"
@@ -279,73 +314,75 @@ export function ProjectDetailPage() {
               <ArrowLeft className="w-5 h-5" />
             </button>
 
-            {/* Project switcher dropdown */}
-            <div ref={projectSwitcherRef} className="relative flex-1 min-w-0">
-              <button
-                onClick={() => setIsProjectSwitcherOpen(!isProjectSwitcherOpen)}
-                className={cn(
-                  'flex items-center gap-2 w-full px-1.5 py-1 rounded-lg transition-colors duration-150',
-                  'hover:bg-white/10',
-                  isProjectSwitcherOpen && 'bg-white/10'
-                )}
-              >
-                <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <Wrench className="w-3.5 h-3.5 text-blue-400" />
-                </div>
-                <span className="text-sm font-semibold text-white truncate">
-                  {project.name}
-                </span>
-                <ChevronDown className={cn(
-                  'w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150',
-                  isProjectSwitcherOpen && 'rotate-180'
-                )} />
-              </button>
+            {/* Project switcher dropdown - hidden when collapsed */}
+            {!layoutState.leftSidebarCollapsed && (
+              <div ref={projectSwitcherRef} className="relative flex-1 min-w-0">
+                <button
+                  onClick={() => setIsProjectSwitcherOpen(!isProjectSwitcherOpen)}
+                  className={cn(
+                    'flex items-center gap-2 w-full px-1.5 py-1 rounded-lg transition-colors duration-150',
+                    'hover:bg-white/10',
+                    isProjectSwitcherOpen && 'bg-white/10'
+                  )}
+                >
+                  <div className="flex-shrink-0 w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                    <Wrench className="w-3.5 h-3.5 text-blue-400" />
+                  </div>
+                  <span className="text-sm font-semibold text-white truncate">
+                    {project.name}
+                  </span>
+                  <ChevronDown className={cn(
+                    'w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform duration-150',
+                    isProjectSwitcherOpen && 'rotate-180'
+                  )} />
+                </button>
 
-              {isProjectSwitcherOpen && (
-                <div className="absolute top-full left-0 mt-1 w-72 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1 max-h-80 overflow-y-auto">
-                  {projects.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        if (p.id !== project.id) {
-                          navigate(`/project/${p.id}`);
-                        }
-                        setIsProjectSwitcherOpen(false);
-                      }}
-                      className={cn(
-                        'flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors duration-100',
-                        p.id === project.id
-                          ? 'bg-blue-500/10 text-white'
-                          : 'text-gray-300 hover:bg-white/5 hover:text-white'
-                      )}
-                    >
-                      <div
-                        className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs"
-                        style={{ backgroundColor: `${p.icon.backgroundColor}30` }}
-                      >
-                        {p.icon.type === 'emoji' ? (
-                          <span>{p.icon.value}</span>
-                        ) : (
-                          <span className="text-[10px] font-bold" style={{ color: p.icon.backgroundColor }}>
-                            {p.icon.value}
-                          </span>
+                {isProjectSwitcherOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-72 bg-[#141b2d] border border-[#1e293b] rounded-lg shadow-xl z-50 py-1 max-h-80 overflow-y-auto">
+                    {projects.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          if (p.id !== project.id) {
+                            navigate(`/project/${p.id}`);
+                          }
+                          setIsProjectSwitcherOpen(false);
+                        }}
+                        className={cn(
+                          'flex items-center gap-3 w-full px-3 py-2.5 text-left transition-colors duration-100',
+                          p.id === project.id
+                            ? 'bg-blue-500/10 text-white'
+                            : 'text-gray-300 hover:bg-white/5 hover:text-white'
                         )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{p.name}</div>
-                        <div className="text-[11px] text-gray-500">{p.sourceCount} sources</div>
-                      </div>
-                      {p.id === project.id && (
-                        <Check className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                      >
+                        <div
+                          className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs"
+                          style={{ backgroundColor: `${p.icon.backgroundColor}30` }}
+                        >
+                          {p.icon.type === 'emoji' ? (
+                            <span>{p.icon.value}</span>
+                          ) : (
+                            <span className="text-[10px] font-bold" style={{ color: p.icon.backgroundColor }}>
+                              {p.icon.value}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{p.name}</div>
+                          <div className="text-[11px] text-gray-500">{p.sourceCount} sources</div>
+                        </div>
+                        {p.id === project.id && (
+                          <Check className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Center + Right section - Tabs + Share + Live + Bell + Avatar */}
+          {/* Center + Right section - Tabs + Layout Controls + Share + Live + Bell + Avatar */}
           <div className="flex-1 flex items-center justify-between px-6 h-full">
             {/* Tab Navigation */}
             <div className="flex items-center gap-1 h-full">
@@ -375,8 +412,11 @@ export function ProjectDetailPage() {
               ))}
             </div>
 
-            {/* Right actions: Share + Live + Bell + Avatar */}
+            {/* Right actions: Layout Controls + Share + Live + Bell + Avatar */}
             <div className="flex items-center gap-3 flex-shrink-0">
+              {/* Layout Toggle Controls */}
+              <HeaderLayoutControls />
+
               <button
                 onClick={() => setIsShareModalOpen(true)}
                 className={cn(
@@ -451,35 +491,72 @@ export function ProjectDetailPage() {
         <div className="flex-1 flex overflow-hidden">
           {/* Left Sidebar - Source Files */}
           <PanelErrorBoundary panelName="Source Files">
-            <LeftSidebar className="flex-shrink-0" style={{ width: sidebarWidth }} projectName={project.name} projectId={project.id} />
+            {layoutState.leftSidebarCollapsed ? (
+              <aside
+                className="flex-shrink-0 h-full bg-[#0d1220] border-r border-[#1e293b] flex items-center justify-center cursor-pointer hover:bg-white/5 transition-colors"
+                style={{ width: 48, order: leftOrder }}
+                onClick={toggleLeftSidebar}
+                title="Show Explorer"
+              >
+                <span
+                  className="text-[11px] font-medium text-gray-500 select-none"
+                  style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+                >
+                  Explorer
+                </span>
+              </aside>
+            ) : (
+              <LeftSidebar
+                className="flex-shrink-0"
+                style={{ width: sidebarWidth, order: leftOrder }}
+                projectName={project.name}
+                projectId={project.id}
+              />
+            )}
           </PanelErrorBoundary>
 
-          {/* Resize Handle */}
-          <div
-            onMouseDown={handleResizeMouseDown}
-            className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
-          />
+          {/* Left Resize Handle - hidden when left sidebar collapsed */}
+          {!layoutState.leftSidebarCollapsed && (
+            <div
+              onMouseDown={handleLeftResizeMouseDown}
+              className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
+              style={{ order: leftOrder }}
+            />
+          )}
 
           {/* Main Content */}
           <PanelErrorBoundary panelName="Main Content">
             <MainContent
               className="flex-1 min-w-0"
+              style={{ order: centerOrder }}
               projectName={project.name}
               projectId={project.id}
               activeTab={activeTab}
-              selectedIngestionNumber={selectedIngestionNumber}
-              onCloseIngestionDetail={handleCloseIngestionDetail}
+              selectedIngestionNumbers={selectedIngestionNumbers}
               onViewFullGraph={handleViewFullGraph}
             />
           </PanelErrorBoundary>
+
+          {/* Right Resize Handle - hidden when right sidebar collapsed */}
+          {!layoutState.rightSidebarCollapsed && (
+            <div
+              onMouseDown={handleRightResizeMouseDown}
+              className="w-1 flex-shrink-0 cursor-col-resize bg-[#1e293b] hover:bg-blue-500/50 active:bg-blue-500 transition-colors"
+              style={{ order: rightOrder }}
+            />
+          )}
 
           {/* Right Sidebar - Chat History & Ingestion History */}
           <PanelErrorBoundary panelName="History Panel">
             <RightSidebar
               className="flex-shrink-0"
+              style={{ order: rightOrder }}
               projectId={project.id}
-              selectedIngestionNumber={selectedIngestionNumber}
+              selectedIngestionNumbers={selectedIngestionNumbers}
               onSelectIngestion={handleSelectIngestion}
+              collapsed={layoutState.rightSidebarCollapsed}
+              onToggleCollapse={toggleRightSidebar}
+              expandedWidth={rightSidebarWidth}
             />
           </PanelErrorBoundary>
         </div>
@@ -510,6 +587,14 @@ export function ProjectDetailPage() {
         contextId={project.id}
       />
     </>
+  );
+}
+
+export function ProjectDetailPage() {
+  return (
+    <LayoutProvider>
+      <ProjectDetailPageContent />
+    </LayoutProvider>
   );
 }
 

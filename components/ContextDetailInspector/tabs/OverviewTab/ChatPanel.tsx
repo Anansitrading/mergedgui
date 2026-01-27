@@ -1,9 +1,10 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
-import { ThumbsUp, ThumbsDown, Copy, Bot, Plus, X, Pencil } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Copy, Bot, Plus, X, Pencil, MessageSquare } from 'lucide-react';
 import { ChatMessage } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { cn } from '../../../../utils/cn';
 import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
+import { useLayout } from '../../../../contexts/LayoutContext';
 import type { ChatMessage as ChatMessageType, AISummary } from '../../../../types/contextInspector';
 
 interface TokenUsage {
@@ -43,6 +44,7 @@ export function ChatPanel({
   const renameInputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const { state, createNewChat, closeTab, focusTab, renameChat } = useChatHistory();
+  const { state: layoutState, toggleChatInput } = useLayout();
 
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ tabId: string; x: number; y: number } | null>(null);
@@ -307,12 +309,22 @@ export function ChatPanel({
       </div>
 
       {/* Input */}
-      <ChatInput
-        onSend={onSendMessage}
-        isLoading={isLoading}
-        disabled={false}
-        tokenUsage={tokenUsage}
-      />
+      {layoutState.chatInputCollapsed ? (
+        <button
+          onClick={toggleChatInput}
+          className="shrink-0 flex items-center justify-center gap-2 px-3 py-1.5 border-t border-[#1e293b] text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span>Show chat input</span>
+        </button>
+      ) : (
+        <ChatInput
+          onSend={onSendMessage}
+          isLoading={isLoading}
+          disabled={false}
+          tokenUsage={tokenUsage}
+        />
+      )}
 
       {/* Tab context menu */}
       {contextMenu && (
