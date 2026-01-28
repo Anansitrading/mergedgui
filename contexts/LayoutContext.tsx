@@ -32,12 +32,20 @@ const DEFAULT_STATE: LayoutState = {
   panelOrder: ['left', 'center', 'right'],
 };
 
+function ensureRightLast(order: [PanelPosition, PanelPosition, PanelPosition]): [PanelPosition, PanelPosition, PanelPosition] {
+  if (order[2] === 'right') return order;
+  const others = order.filter((p) => p !== 'right') as [PanelPosition, PanelPosition];
+  return [...others, 'right'];
+}
+
 function loadState(): LayoutState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      return { ...DEFAULT_STATE, ...parsed };
+      const state = { ...DEFAULT_STATE, ...parsed };
+      if (state.panelOrder) state.panelOrder = ensureRightLast(state.panelOrder);
+      return state;
     }
     // Migrate old right sidebar collapsed state
     const oldRight = localStorage.getItem(OLD_RIGHT_SIDEBAR_KEY);
@@ -109,7 +117,7 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setPanelOrder = useCallback((order: [PanelPosition, PanelPosition, PanelPosition]) => {
-    setState((prev) => ({ ...prev, panelOrder: order }));
+    setState((prev) => ({ ...prev, panelOrder: ensureRightLast(order) }));
   }, []);
 
   return (

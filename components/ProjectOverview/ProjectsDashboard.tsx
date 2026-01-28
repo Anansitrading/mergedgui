@@ -42,7 +42,6 @@ const SORT_OPTIONS: { id: ProjectSort; label: string }[] = [
 export function ProjectsDashboard({ onOpenSettings, embedded = false }: ProjectsDashboardProps) {
   const navigate = useNavigate();
   const {
-    projects,
     filteredProjects,
     filter,
     sort,
@@ -246,7 +245,7 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
           <ProjectsFilterSidebar
             filters={sidebarFilters}
             onFiltersChange={setSidebarFilters}
-            projects={projects}
+            projects={filteredProjects}
             onDropProject={handleDropProject}
             onProjectClick={handleSidebarProjectClick}
           />

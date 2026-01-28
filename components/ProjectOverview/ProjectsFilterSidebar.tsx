@@ -78,7 +78,7 @@ export function ProjectsFilterSidebar({
   onProjectClick,
 }: ProjectsFilterSidebarProps) {
   const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['quick-recent']));
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const isResizing = useRef(false);
   const startX = useRef(0);
@@ -134,7 +134,8 @@ export function ProjectsFilterSidebar({
   const projectsByCategory = useMemo(() => {
     const recent = [...projects]
       .filter((p) => !p.archived)
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+      .slice(0, 4);
     const starred = projects.filter((p) => p.starred);
     const archived = projects.filter((p) => p.archived);
     const byTag: Record<string, Project[]> = {};
