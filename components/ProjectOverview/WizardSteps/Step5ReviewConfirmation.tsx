@@ -112,7 +112,7 @@ function ReviewSection({
           className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary hover:text-primary/80 hover:bg-primary/5 rounded-md transition-colors"
         >
           <Pencil size={14} />
-          <span>Bewerken</span>
+          <span>Edit</span>
         </button>
       </div>
       {isExpanded && (
@@ -187,22 +187,22 @@ function CostEstimateSection({ estimate }: CostEstimateSectionProps) {
     <div className="p-4 bg-muted/20 border border-border rounded-lg space-y-4">
       <h3 className="font-medium text-foreground flex items-center gap-2">
         <Calculator size={16} />
-        Geschatte kosten
+        Estimated costs
       </h3>
 
       <div className="grid grid-cols-3 gap-4">
         <EstimateBadge
-          label="Verwerking"
-          value={estimate.isPlanEligible ? 'Inbegrepen' : formatCostFromCents(estimate.processingCost)}
+          label="Processing"
+          value={estimate.isPlanEligible ? 'Included' : formatCostFromCents(estimate.processingCost)}
           variant={estimate.isPlanEligible ? 'success' : 'default'}
         />
         <EstimateBadge
-          label="Opslag/maand"
-          value={estimate.storageCostMonthly === 0 ? 'Gratis' : formatCostFromCents(estimate.storageCostMonthly)}
+          label="Storage/month"
+          value={estimate.storageCostMonthly === 0 ? 'Free' : formatCostFromCents(estimate.storageCostMonthly)}
           variant={estimate.storageCostMonthly === 0 ? 'success' : 'default'}
         />
         <EstimateBadge
-          label="Besparing"
+          label="Savings"
           value={`${Math.round(estimate.savingsVsRaw)}%`}
           subtext="vs raw context"
           variant="success"
@@ -212,8 +212,8 @@ function CostEstimateSection({ estimate }: CostEstimateSectionProps) {
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Sparkles size={12} className="text-primary" />
         <span>
-          {formatCompactNumber(estimate.totalTokens)} tokens gecomprimeerd naar{' '}
-          {formatCompactNumber(estimate.optimizedTokens)} ({reductionPercent}% kleiner)
+          {formatCompactNumber(estimate.totalTokens)} tokens compressed to{' '}
+          {formatCompactNumber(estimate.optimizedTokens)} ({reductionPercent}% smaller)
         </span>
       </div>
     </div>
@@ -248,7 +248,7 @@ function ValidationWarnings({ warnings, onEditStep }: ValidationWarningsProps) {
             onClick={() => onEditStep(warning.step)}
             className="text-xs text-destructive hover:underline shrink-0"
           >
-            Oplossen
+            Fix
           </button>
         </div>
       ))}
@@ -285,10 +285,10 @@ function ValidationWarnings({ warnings, onEditStep }: ValidationWarningsProps) {
 function getProjectTypeLabel(type: ProjectType | null): string {
   const labels: Record<ProjectType, string> = {
     repository: 'Repository',
-    files: 'Bestanden',
-    manual: 'Handmatig',
+    files: 'Files',
+    manual: 'Manual',
   };
-  return type ? labels[type] : 'Niet geselecteerd';
+  return type ? labels[type] : 'Not selected';
 }
 
 function getProviderIcon(provider: GitProvider): string {
@@ -305,17 +305,17 @@ function getEnabledMetadataOptions(options: ProjectCreationForm['metadataOptions
   const enabled: string[] = [];
   const labels = METADATA_OPTION_LABELS;
 
-  if (options.functionSignatures) enabled.push('Functie signatures');
+  if (options.functionSignatures) enabled.push('Function signatures');
   if (options.importDependencies) enabled.push('Import dependencies');
   if (options.gitHistory) enabled.push('Git history');
-  if (options.fileStructure) enabled.push('Bestandsstructuur');
-  if (options.customAnnotations) enabled.push('Custom annotaties');
+  if (options.fileStructure) enabled.push('File structure');
+  if (options.customAnnotations) enabled.push('Custom annotations');
 
   return enabled;
 }
 
 function getRoleSummary(members: ProjectCreationForm['members']): string {
-  if (members.length === 0) return 'Geen teamleden';
+  if (members.length === 0) return 'No team members';
 
   const roleCounts = members.reduce((acc, member) => {
     acc[member.role] = (acc[member.role] || 0) + 1;
@@ -338,7 +338,7 @@ function validateFormData(formData: ProjectCreationForm): ReviewWarning[] {
     warnings.push({
       step: 'type_selection',
       field: 'projectType',
-      message: 'Selecteer een projecttype om door te gaan',
+      message: 'Select a project type to continue',
       severity: 'error',
     });
   }
@@ -348,7 +348,7 @@ function validateFormData(formData: ProjectCreationForm): ReviewWarning[] {
     warnings.push({
       step: 'basic_info',
       field: 'name',
-      message: 'Voer een projectnaam in',
+      message: 'Enter a project name',
       severity: 'error',
     });
   }
@@ -358,7 +358,7 @@ function validateFormData(formData: ProjectCreationForm): ReviewWarning[] {
     warnings.push({
       step: 'source_config',
       field: 'repositories',
-      message: 'Voeg minimaal één repository toe',
+      message: 'Add at least one repository',
       severity: 'error',
     });
   }
@@ -367,7 +367,7 @@ function validateFormData(formData: ProjectCreationForm): ReviewWarning[] {
     warnings.push({
       step: 'source_config',
       field: 'files',
-      message: 'Upload minimaal één bestand',
+      message: 'Upload at least one file',
       severity: 'error',
     });
   }
@@ -376,7 +376,7 @@ function validateFormData(formData: ProjectCreationForm): ReviewWarning[] {
     warnings.push({
       step: 'source_config',
       field: 'manualContent',
-      message: 'Voer handmatige content in',
+      message: 'Enter manual content',
       severity: 'error',
     });
   }
@@ -386,7 +386,7 @@ function validateFormData(formData: ProjectCreationForm): ReviewWarning[] {
     warnings.push({
       step: 'team_setup',
       field: 'members',
-      message: 'Dit project heeft geen teamleden. Je kunt later teamleden toevoegen.',
+      message: 'This project has no team members. You can add team members later.',
       severity: 'info',
     });
   }
@@ -432,10 +432,10 @@ export function Step5ReviewConfirmation({
         </div>
         <div>
           <h2 className="text-lg font-semibold text-foreground">
-            Projectinstellingen controleren
+            Review project settings
           </h2>
           <p className="text-sm text-muted-foreground">
-            Controleer je instellingen voordat je begint met verwerken
+            Review your settings before starting processing
           </p>
         </div>
       </div>
@@ -458,13 +458,13 @@ export function Step5ReviewConfirmation({
         stepId="basic_info"
         onEdit={onEditStep}
       >
-        <ReviewItem label="Naam" value={formData.name || '—'} />
+        <ReviewItem label="Name" value={formData.name || '—'} />
         <ReviewItem
           label="Type"
           value={getProjectTypeLabel(formData.projectType)}
         />
         <ReviewItem
-          label="Beschrijving"
+          label="Description"
           value={formData.description || '—'}
           muted={!formData.description}
         />
@@ -475,12 +475,12 @@ export function Step5ReviewConfirmation({
               {formData.privacy === 'private' ? (
                 <>
                   <Lock size={14} />
-                  Privé
+                  Private
                 </>
               ) : (
                 <>
                   <Globe size={14} />
-                  Gedeeld
+                  Shared
                 </>
               )}
             </span>
@@ -495,11 +495,11 @@ export function Step5ReviewConfirmation({
           icon={<FolderGit2 size={18} />}
           stepId="source_config"
           onEdit={onEditStep}
-          badge={`${formData.repositories.length} geselecteerd`}
+          badge={`${formData.repositories.length} selected`}
         >
           {formData.repositories.length === 0 ? (
             <p className="text-sm text-muted-foreground italic">
-              Geen repositories toegevoegd
+              No repositories added
             </p>
           ) : (
             <div className="space-y-2">
@@ -526,15 +526,15 @@ export function Step5ReviewConfirmation({
 
       {formData.projectType === 'files' && (
         <ReviewSection
-          title="Bestanden"
+          title="Files"
           icon={<FileText size={18} />}
           stepId="source_config"
           onEdit={onEditStep}
-          badge={`${formData.files?.length || 0} bestanden`}
+          badge={`${formData.files?.length || 0} files`}
         >
           {!formData.files || formData.files.length === 0 ? (
             <p className="text-sm text-muted-foreground italic">
-              Geen bestanden geüpload
+              No files uploaded
             </p>
           ) : (
             <div className="space-y-2">
@@ -554,7 +554,7 @@ export function Step5ReviewConfirmation({
               ))}
               {formData.files.length > 5 && (
                 <p className="text-xs text-muted-foreground pl-2">
-                  +{formData.files.length - 5} meer bestanden
+                  +{formData.files.length - 5} more files
                 </p>
               )}
             </div>
@@ -564,14 +564,14 @@ export function Step5ReviewConfirmation({
 
       {formData.projectType === 'manual' && (
         <ReviewSection
-          title="Handmatige Content"
+          title="Manual Content"
           icon={<FileText size={18} />}
           stepId="source_config"
           onEdit={onEditStep}
         >
           {!formData.manualContent ? (
             <p className="text-sm text-muted-foreground italic">
-              Geen content ingevoerd
+              No content entered
             </p>
           ) : (
             <div className="p-3 bg-muted/30 rounded-lg">
@@ -579,7 +579,7 @@ export function Step5ReviewConfirmation({
                 {formData.manualContent}
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                {formData.manualContent.length} karakters
+                {formData.manualContent.length} characters
               </p>
             </div>
           )}
@@ -588,63 +588,63 @@ export function Step5ReviewConfirmation({
 
       {/* Team Access Section */}
       <ReviewSection
-        title="Team Toegang"
+        title="Team Access"
         icon={<Users size={18} />}
         stepId="team_setup"
         onEdit={onEditStep}
-        badge={formData.members.length > 0 ? `${formData.members.length} leden` : undefined}
+        badge={formData.members.length > 0 ? `${formData.members.length} members` : undefined}
       >
         <ReviewItem
-          label="Teamleden"
+          label="Team members"
           value={getRoleSummary(formData.members)}
           muted={formData.members.length === 0}
         />
         <ReviewItem
-          label="Standaard notificaties"
+          label="Default notifications"
           value={
             formData.defaultNotificationLevel === 'real-time'
               ? 'Real-time'
               : formData.defaultNotificationLevel === 'daily'
-              ? 'Dagelijks'
+              ? 'Daily'
               : formData.defaultNotificationLevel === 'weekly'
-              ? 'Wekelijks'
-              : 'Uitgeschakeld'
+              ? 'Weekly'
+              : 'Disabled'
           }
         />
       </ReviewSection>
 
       {/* Advanced Settings Section */}
       <ReviewSection
-        title="Geavanceerde Instellingen"
+        title="Advanced Settings"
         icon={<Settings2 size={18} />}
         stepId="settings"
         onEdit={onEditStep}
         defaultExpanded={false}
       >
         <ReviewItem
-          label="Chunking strategie"
+          label="Chunking strategy"
           value={getChunkingDescription(formData.chunkingStrategy)}
         />
         <ReviewItem
-          label="Output formaat"
+          label="Output format"
           value={
             OUTPUT_FORMAT_OPTIONS.find((o) => o.value === formData.outputFormat)?.label ||
             formData.outputFormat
           }
         />
         <ReviewItem
-          label="Metadata extractie"
+          label="Metadata extraction"
           value={
             enabledMetadata.length > 0 ? (
               <span className="text-xs">{enabledMetadata.join(', ')}</span>
             ) : (
-              'Geen'
+              'None'
             )
           }
           muted={enabledMetadata.length === 0}
         />
         <ReviewItem
-          label="Secrets anonimiseren"
+          label="Anonymize secrets"
           value={
             formData.processingOptions.anonymizeSecrets ? (
               <span className="flex items-center gap-1 text-emerald-600">
@@ -657,8 +657,8 @@ export function Step5ReviewConfirmation({
           }
         />
         <ReviewItem
-          label="Parallel verwerken"
-          value={formData.processingOptions.parallelProcessing ? 'Aan' : 'Uit'}
+          label="Parallel processing"
+          value={formData.processingOptions.parallelProcessing ? 'On' : 'Off'}
         />
       </ReviewSection>
 
@@ -672,7 +672,7 @@ export function Step5ReviewConfirmation({
           onClick={() => onEditStep('settings')}
           className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
         >
-          Terug
+          Back
         </button>
         <button
           type="button"
@@ -688,12 +688,12 @@ export function Step5ReviewConfirmation({
           {isSubmitting ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              <span>Project aanmaken...</span>
+              <span>Creating project...</span>
             </>
           ) : (
             <>
               <Rocket size={16} />
-              <span>Aanmaken & starten</span>
+              <span>Create & start</span>
             </>
           )}
         </button>

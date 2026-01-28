@@ -43,7 +43,7 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <FolderPlus size={20} className="text-primary" />
-            Nieuw project
+            New project
           </h2>
           <button
             onClick={onClose}
@@ -60,7 +60,7 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
               htmlFor="project-name"
               className="block text-sm font-medium text-foreground mb-2"
             >
-              Project naam
+              Project name
             </label>
             <input
               ref={inputRef}
@@ -68,13 +68,13 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Bijv. Product Research Q4"
+              placeholder="E.g. Product Research Q4"
               className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
             />
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Je kunt bronnen toevoegen nadat het project is aangemaakt.
+            You can add sources after the project is created.
           </p>
 
           {/* Footer */}
@@ -84,14 +84,14 @@ export function NewProjectModal({ isOpen, onClose, onCreate }: NewProjectModalPr
               onClick={onClose}
               className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
             >
-              Annuleren
+              Cancel
             </button>
             <button
               type="submit"
               disabled={!name.trim()}
               className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              Project maken
+              Create project
             </button>
           </div>
         </form>

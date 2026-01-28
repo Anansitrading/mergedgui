@@ -92,8 +92,8 @@ export function SkillsTab() {
       );
     }
 
-    // Sort by rating (highest first) for better discovery
-    result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    // Sort by star count (most starred first) for better discovery
+    result.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
 
     return result;
   }, [skills, search, activeSubTab]);

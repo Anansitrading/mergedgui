@@ -253,7 +253,7 @@ function ProjectNameField({
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Bijv. Product Research Q4"
+          placeholder="E.g. Product Research Q4"
           maxLength={NAME_MAX_LENGTH}
           className={cn(
             'w-full px-4 py-2.5 bg-muted/50 border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none transition-all pr-10',
@@ -295,7 +295,7 @@ function ProjectNameField({
         </div>
       ) : (
         <p id="name-helper" className="text-xs text-muted-foreground">
-          (Min {NAME_MIN_LENGTH} char, max {NAME_MAX_LENGTH} - focus op waarde)
+          (Min {NAME_MIN_LENGTH} char, max {NAME_MAX_LENGTH} - focus on value)
         </p>
       )}
     </div>
@@ -327,7 +327,7 @@ function DescriptionField({ value, onChange }: DescriptionFieldProps) {
           id="project-description"
           value={value}
           onChange={(e) => onChange(e.target.value.slice(0, DESCRIPTION_MAX_LENGTH))}
-          placeholder="Bijv. Analyse API docs & SDK patterns"
+          placeholder="E.g. Analyze API docs & SDK patterns"
           rows={3}
           maxLength={DESCRIPTION_MAX_LENGTH}
           className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all resize-none"
@@ -349,7 +349,7 @@ function DescriptionField({ value, onChange }: DescriptionFieldProps) {
       </div>
 
       <p id="description-helper" className="text-xs text-muted-foreground">
-        (Max {DESCRIPTION_MAX_LENGTH} char - voor context)
+        (Max {DESCRIPTION_MAX_LENGTH} char - for context)
       </p>
     </div>
   );
@@ -563,7 +563,7 @@ export function ProjectCreationModal({
         const duplicateResult = await checkDuplicateName(debouncedName, existingProjectNames);
         if (duplicateResult.exists) {
           setValidationState('error');
-          setValidationError(`"${debouncedName}" bestaat al`);
+          setValidationError(`"${debouncedName}" already exists`);
           setSuggestion(duplicateResult.suggestion);
         } else {
           setValidationState('valid');
@@ -686,7 +686,7 @@ export function ProjectCreationModal({
 
     if (isDirty && currentStep < 6) {
       const confirmed = window.confirm(
-        'Je hebt onopgeslagen wijzigingen. Weet je zeker dat je wilt sluiten?'
+        'You have unsaved changes. Are you sure you want to close?'
       );
       if (!confirmed) return;
     }
@@ -854,13 +854,13 @@ export function ProjectCreationModal({
   // Get step title
   const getStepTitle = () => {
     switch (currentStep) {
-      case 1: return 'Nieuw project';
-      case 2: return 'Bronnen toevoegen';
-      case 3: return 'Geavanceerde instellingen';
-      case 4: return 'Team toegang';
-      case 5: return 'Bevestigen';
-      case 6: return isIngestionComplete ? 'Voltooid' : 'Verwerking';
-      default: return 'Nieuw project';
+      case 1: return 'New project';
+      case 2: return 'Add sources';
+      case 3: return 'Advanced settings';
+      case 4: return 'Team access';
+      case 5: return 'Confirm';
+      case 6: return isIngestionComplete ? 'Completed' : 'Processing';
+      default: return 'New project';
     }
   };
 
@@ -1018,7 +1018,7 @@ export function ProjectCreationModal({
                 className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               >
                 <ChevronLeft size={16} />
-                Terug
+                Back
               </button>
             ) : (
               <button
@@ -1026,7 +1026,7 @@ export function ProjectCreationModal({
                 onClick={handleClose}
                 className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               >
-                Annuleren
+                Cancel
               </button>
             )}
             <button
@@ -1047,7 +1047,7 @@ export function ProjectCreationModal({
                 </>
               ) : (
                 <>
-                  <span>Volgende</span>
+                  <span>Next</span>
                   <ChevronRight size={16} />
                 </>
               )}

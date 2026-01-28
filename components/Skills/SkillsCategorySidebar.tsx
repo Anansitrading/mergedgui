@@ -66,7 +66,6 @@ function CategorySection({
           <ChevronRight size={14} className="text-muted-foreground shrink-0" />
         )}
         <span className="flex-1 text-left">{CATEGORY_LABELS[category]}</span>
-        <span className="text-xs text-muted-foreground tabular-nums">{skills.length}</span>
       </button>
 
       {/* Skills List */}
@@ -93,8 +92,8 @@ interface SkillItemProps {
 }
 
 function SkillItem({ skill, isSelected, onSelect }: SkillItemProps) {
-  const rating = skill.rating ?? 0;
-  const hasRating = rating > 0;
+  const starCount = skill.starCount ?? 0;
+  const hasStars = starCount > 0;
 
   return (
     <div
@@ -109,10 +108,10 @@ function SkillItem({ skill, isSelected, onSelect }: SkillItemProps) {
     >
       <Zap size={14} className={cn('shrink-0', isSelected ? 'text-primary' : 'text-muted-foreground')} />
       <span className="flex-1 text-sm truncate">{skill.name}</span>
-      {hasRating && (
+      {hasStars && (
         <div className="flex items-center gap-0.5 shrink-0">
           <Star size={12} className="text-amber-400 fill-amber-400" />
-          <span className="text-xs text-muted-foreground tabular-nums">{rating.toFixed(1)}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{starCount}</span>
         </div>
       )}
     </div>
@@ -150,9 +149,9 @@ export function SkillsCategorySidebar({
       grouped[skill.category]!.push(skill);
     }
 
-    // Sort skills within each category by rating (highest rated first)
+    // Sort skills within each category by star count (most starred first)
     for (const category of Object.keys(grouped) as SkillCategory[]) {
-      grouped[category]!.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+      grouped[category]!.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
     }
 
     return grouped;
