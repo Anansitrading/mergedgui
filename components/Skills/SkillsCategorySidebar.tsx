@@ -184,13 +184,13 @@ export function SkillsCategorySidebar({
   }
 
   return (
-    <aside className="w-64 shrink-0 overflow-y-auto">
+    <aside className="w-64 shrink-0 h-full overflow-y-auto pr-4 border-r border-border">
       <div className="py-2">
         {/* Skills count header */}
         <div className="px-2 py-1.5 mb-2">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-            {skills.length} {skills.length === 1 ? 'Skill' : 'Skills'}
-          </p>
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Skills ({skills.length})
+          </div>
         </div>
 
         {/* Category sections */}

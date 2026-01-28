@@ -3,15 +3,17 @@
 // Used for both viewing/editing existing skills and creating new ones
 
 import { useEffect, useCallback, useState } from 'react';
-import { Zap, Save, Loader2, Play, RotateCcw, Code, Workflow, Globe, FolderOpen } from 'lucide-react';
+import { Zap, Save, Loader2, Play, RotateCcw, Code, Workflow } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSkillBuilder } from '../../hooks/useSkillBuilder';
 import { SkillChat } from './ConversationalSkillBuilder/SkillChat';
 import { YamlPreview } from './ConversationalSkillBuilder/YamlPreview';
 import { MarkdownPreview } from './ConversationalSkillBuilder/MarkdownPreview';
 import { SkillFlowDiagram } from './ConversationalSkillBuilder/SkillFlowDiagram';
+import { ScopeSelectorDropdown } from './ScopeSelectorDropdown';
 import type { Skill } from '../../types/skills';
-import type { SkillDraft } from '../../types/skillDraft';
+import type { SkillDraft, SkillScopeSelection } from '../../types/skillDraft';
+import { defaultScopeSelection } from '../../types/skillDraft';
 
 type PreviewTab = 'code' | 'flow';
 
@@ -134,34 +136,11 @@ export function SkillEditorPanel({
           </div>
 
           {/* Scope Selector */}
-          <div className="flex items-center rounded-lg border border-border bg-secondary/50 p-0.5 ml-4">
-            <button
-              onClick={() => updateDraft({ scope: 'global' })}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors',
-                state.draft.scope === 'global'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-              title="Available in all projects"
-            >
-              <Globe size={14} />
-              Global
-            </button>
-            <button
-              onClick={() => updateDraft({ scope: 'local' })}
-              className={cn(
-                'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-colors',
-                state.draft.scope === 'local'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-              title="Only for current project"
-            >
-              <FolderOpen size={14} />
-              Project
-            </button>
-          </div>
+          <ScopeSelectorDropdown
+            value={state.draft.scopeSelection || defaultScopeSelection}
+            onChange={(selection: SkillScopeSelection) => updateDraft({ scopeSelection: selection })}
+            className="ml-4"
+          />
         </div>
 
         <div className="flex items-center gap-2">

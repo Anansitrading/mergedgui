@@ -9,7 +9,10 @@ import { SkillChat } from './SkillChat';
 import { YamlPreview } from './YamlPreview';
 import { MarkdownPreview } from './MarkdownPreview';
 import { SkillFlowDiagram } from './SkillFlowDiagram';
+import { ScopeSelectorDropdown } from '../ScopeSelectorDropdown';
 import type { Skill } from '../../../types/skills';
+import type { SkillScopeSelection } from '../../../types/skillDraft';
+import { defaultScopeSelection } from '../../../types/skillDraft';
 
 type PreviewTab = 'code' | 'flow';
 
@@ -30,6 +33,7 @@ export function ConversationalSkillBuilder({
     sendMessage,
     approveConfig,
     rejectConfig,
+    updateDraft,
     createSkill,
     reset,
     canCreateSkill,
@@ -122,6 +126,13 @@ export function ConversationalSkillBuilder({
                 Build your skill through conversation
               </p>
             </div>
+
+            {/* Scope Selector */}
+            <ScopeSelectorDropdown
+              value={state.draft.scopeSelection || defaultScopeSelection}
+              onChange={(selection: SkillScopeSelection) => updateDraft({ scopeSelection: selection })}
+              className="ml-4"
+            />
           </div>
 
           <div className="flex items-center gap-3">

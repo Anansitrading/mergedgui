@@ -39,6 +39,9 @@ export { ConversationalSkillBuilder } from './ConversationalSkillBuilder';
 // Inline Skill Editor Panel (embedded 3-panel layout for viewing/editing skills)
 export { SkillEditorPanel } from './SkillEditorPanel';
 
+// Scope Selector Dropdown for skills
+export { ScopeSelectorDropdown } from './ScopeSelectorDropdown';
+
 // Task 2_3: Create Skill Form Components
 export { CreateSkillModal } from './CreateSkillModal';
 export { SkillForm } from './SkillForm';

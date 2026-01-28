@@ -5,14 +5,14 @@
 // Layout Redesign: Skills shown in sidebar grouped by category
 // New: Inline skill editor with chat interface
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Plus, Search, Filter } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SkillsCategorySidebar } from '../Skills/SkillsCategorySidebar';
 import { SkillEditorPanel } from '../Skills/SkillEditorPanel';
 import { CommunitySkillsView } from '../Skills/CommunitySkillsView';
 import { ExecuteSkillModal } from '../Skills/ExecuteSkillModal';
-import { ConversationalSkillBuilder, OnboardingModal, useSkillsOnboarding } from '../Skills';
+import { ConversationalSkillBuilder } from '../Skills';
 import { useSkills } from '../../hooks/useSkills';
 import { useSkillsSubNavigation, type SkillsSubTabType } from '../../hooks/useSkillsSubNavigation';
 import type { Skill } from '../../types/skills';
@@ -28,13 +28,53 @@ export function SkillsTab() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const { skills, loading, refetch } = useSkills();
   const { activeSubTab, setActiveSubTab } = useSkillsSubNavigation();
-  const { showOnboarding, dismissOnboarding } = useSkillsOnboarding();
 
   // Selected skill and modal states
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [executeModalSkill, setExecuteModalSkill] = useState<Skill | null>(null);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(288); // 72 * 4 = 288px (w-72)
+  const isResizing = useRef(false);
+
+  const handleMouseDown = useCallback(() => {
+    isResizing.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = Math.min(Math.max(200, e.clientX), 500);
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   // Filter skills based on search and active tab
   const filteredSkills = useMemo(() => {
@@ -102,20 +142,6 @@ export function SkillsTab() {
     refetch();
   }, [refetch]);
 
-  const handleOnboardingClose = useCallback(() => {
-    dismissOnboarding();
-  }, [dismissOnboarding]);
-
-  const handleStartWithTemplate = useCallback(() => {
-    dismissOnboarding();
-    setIsWizardOpen(true);
-  }, [dismissOnboarding]);
-
-  const handleStartFromScratch = useCallback(() => {
-    dismissOnboarding();
-    setIsWizardOpen(true);
-  }, [dismissOnboarding]);
-
   // Render community tab content
   if (activeSubTab === 'community-skills') {
     return (
@@ -146,19 +172,6 @@ export function SkillsTab() {
               ))}
             </div>
 
-            {/* Search */}
-            <div className="relative w-64 hidden md:block">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <Search size={16} className="text-muted-foreground" />
-              </div>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search skills..."
-                className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-              />
-            </div>
           </div>
         </div>
 
@@ -206,19 +219,6 @@ export function SkillsTab() {
             ))}
           </div>
 
-          {/* Search */}
-          <div className="relative w-64 hidden md:block">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <Search size={16} className="text-muted-foreground" />
-            </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search skills..."
-              className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-            />
-          </div>
         </div>
       </div>
 
@@ -226,16 +226,31 @@ export function SkillsTab() {
       <main className="flex-1 overflow-hidden">
         <div className="flex h-full">
           {/* Sidebar with Create button, Filter, and skills grouped by category */}
-          <div className="shrink-0 w-72 flex flex-col border-r border-border bg-card/30">
-            {/* Create & Filter buttons */}
-            <div className="p-4 border-b border-border">
+          <div
+            className="shrink-0 flex flex-col bg-card/30 relative"
+            style={{ width: sidebarWidth }}
+          >
+            {/* Create, Search & Filter buttons */}
+            <div className="p-4">
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCreateSkill}
                   className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
                 >
                   <Plus size={18} />
-                  <span>Create new skill</span>
+                  <span>New</span>
+                </button>
+                <button
+                  onClick={() => setShowSearch(!showSearch)}
+                  className={cn(
+                    'p-2 rounded-lg border transition-colors',
+                    showSearch
+                      ? 'bg-primary/10 border-primary/30 text-primary'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                  title="Search skills"
+                >
+                  <Search size={18} />
                 </button>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -250,6 +265,20 @@ export function SkillsTab() {
                   <Filter size={18} />
                 </button>
               </div>
+
+              {/* Search Input (collapsible) */}
+              {showSearch && (
+                <div className="mt-3">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search skills..."
+                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+              )}
 
               {/* Filter Panel (collapsible) */}
               {showFilters && (
@@ -279,6 +308,12 @@ export function SkillsTab() {
                 loading={loading}
               />
             </div>
+
+            {/* Resize Handle */}
+            <div
+              onMouseDown={handleMouseDown}
+              className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/50 active:bg-primary transition-colors"
+            />
           </div>
 
           {/* Main content - Skill Editor Panel */}
@@ -310,14 +345,6 @@ export function SkillsTab() {
         />
       )}
 
-      {/* Onboarding Modal for first-time users */}
-      {showOnboarding && (
-        <OnboardingModal
-          onClose={handleOnboardingClose}
-          onStartWithTemplate={handleStartWithTemplate}
-          onStartFromScratch={handleStartFromScratch}
-        />
-      )}
     </div>
   );
 }

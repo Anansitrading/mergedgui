@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Search,
   LayoutGrid,
   List,
   ChevronDown,
@@ -288,20 +287,6 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
 
           {/* View Controls */}
           <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="relative w-64 hidden md:block">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <Search size={16} className="text-muted-foreground" />
-              </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects..."
-                className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-              />
-            </div>
-
             {/* View Toggle */}
             <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
               <button
@@ -391,6 +376,8 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
             activeFilterCount={activeFilterCount}
             onProjectClick={selectProject}
             onCreateNew={() => setIsNewProjectModalOpen(true)}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
 
           {/* Repo Mindmap or Empty State */}

@@ -12,6 +12,27 @@ export type SkillTrigger = 'pre-tool' | 'post-tool';
 export type SkillScope = 'global' | 'local';
 
 /**
+ * Granular scope selection for skills
+ * Allows selecting specific projects, worktrees, or branches
+ */
+export interface SkillScopeSelection {
+  type: 'all' | 'projects' | 'worktrees' | 'branches';
+  /** Selected project IDs (when type is 'projects') */
+  projectIds?: string[];
+  /** Selected worktree IDs (when type is 'worktrees') */
+  worktreeIds?: string[];
+  /** Selected branch names (when type is 'branches') */
+  branchNames?: string[];
+}
+
+/**
+ * Default scope selection (all projects)
+ */
+export const defaultScopeSelection: SkillScopeSelection = {
+  type: 'all',
+};
+
+/**
  * Tag categories for automatic detection
  */
 export type TagCategory =
@@ -60,6 +81,7 @@ export interface SkillDraft {
   dependencies: string[];
   trigger: SkillTrigger;
   scope: SkillScope;
+  scopeSelection?: SkillScopeSelection;
   tags: string[];
   instructions: string; // Markdown body
 }
@@ -73,6 +95,7 @@ export const initialSkillDraft: SkillDraft = {
   dependencies: [],
   trigger: 'pre-tool',
   scope: 'local',
+  scopeSelection: defaultScopeSelection,
   tags: [],
   instructions: '',
 };

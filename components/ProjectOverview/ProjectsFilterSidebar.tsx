@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Filter, X, Check } from 'lucide-react';
+import { Plus, Filter, Search, X, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { Project } from '../../types';
 
@@ -32,6 +32,8 @@ interface ProjectsFilterSidebarProps {
   activeFilterCount: number;
   onProjectClick?: (project: Project) => void;
   onCreateNew?: () => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 function SidebarProjectItem({
@@ -71,14 +73,25 @@ export function ProjectsFilterSidebar({
   activeFilterCount,
   onProjectClick,
   onCreateNew,
+  searchQuery,
+  onSearchChange,
 }: ProjectsFilterSidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
+
+  // Focus search input when opened
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -123,18 +136,33 @@ export function ProjectsFilterSidebar({
         className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
       />
       <div className="pr-4 border-r border-border h-full overflow-y-auto flex flex-col">
-        {/* Create New Button + Filter */}
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={onCreateNew}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-          >
-            <Plus size={16} />
-            <span>New</span>
-          </button>
+        {/* Create New Button, Search & Filter */}
+        <div className="mb-4">
+          <div className="flex gap-2">
+            <button
+              onClick={onCreateNew}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+            >
+              <Plus size={16} />
+              <span>New</span>
+            </button>
 
-          {/* Filter Button */}
-          <div className="relative">
+            {/* Search Button */}
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className={cn(
+                'flex items-center justify-center p-2 border rounded-lg transition-colors',
+                showSearch
+                  ? 'bg-primary/10 border-primary/30 text-primary'
+                  : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+              )}
+              title="Search projects"
+            >
+              <Search size={16} />
+            </button>
+
+            {/* Filter Button */}
+            <div className="relative">
             <button
               ref={filterButtonRef}
               onClick={() => {
@@ -276,6 +304,21 @@ export function ProjectsFilterSidebar({
               </>
             )}
           </div>
+          </div>
+
+          {/* Search Input (collapsible) */}
+          {showSearch && (
+            <div className="mt-3">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Search projects..."
+                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              />
+            </div>
+          )}
         </div>
 
         {/* Projects List */}
