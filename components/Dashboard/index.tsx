@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useTabNavigation } from '../../hooks/useTabNavigation';
 import { DashboardTabs } from './DashboardTabs';
 import { ProjectsTab } from './ProjectsTab';
@@ -10,6 +10,7 @@ import { SettingsModal } from '../SettingsModal';
 import { NotificationBell } from '../Notifications/NotificationBell';
 import { NotificationPanel } from '../Notifications/NotificationPanel';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useProjects } from '../../contexts/ProjectsContext';
 import type { Project } from '../../types';
 import type { Notification, SettingsSection } from '../../types/settings';
 
@@ -19,9 +20,15 @@ interface DashboardProps {
 
 export function Dashboard({ onProjectSelect }: DashboardProps) {
   const { activeTab, setActiveTab } = useTabNavigation();
+  const { selectProject } = useProjects();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsInitialSection, setSettingsInitialSection] = useState<SettingsSection | undefined>();
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+
+  const handleTabChange = useCallback((tab: typeof activeTab) => {
+    selectProject(null);
+    setActiveTab(tab);
+  }, [selectProject, setActiveTab]);
 
   const {
     notifications,
@@ -66,7 +73,7 @@ export function Dashboard({ onProjectSelect }: DashboardProps) {
             </div>
 
             {/* Main Navigation Tabs */}
-            <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
+            <DashboardTabs activeTab={activeTab} onTabChange={handleTabChange} />
           </div>
 
           {/* Actions */}

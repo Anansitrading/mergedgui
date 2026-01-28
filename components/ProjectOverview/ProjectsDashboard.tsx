@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -42,6 +42,7 @@ const SORT_OPTIONS: { id: ProjectSort; label: string }[] = [
 export function ProjectsDashboard({ onOpenSettings, embedded = false }: ProjectsDashboardProps) {
   const navigate = useNavigate();
   const {
+    projects,
     filteredProjects,
     filter,
     sort,
@@ -56,6 +57,16 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
     selectedProject,
     selectProject,
   } = useProjects();
+
+  // Recent projects for the empty state quick menu (top 4 non-archived, by updatedAt)
+  const recentProjects = useMemo(
+    () =>
+      [...projects]
+        .filter((p) => !p.archived)
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+        .slice(0, 4),
+    [projects],
+  );
 
   const [sidebarFilters, setSidebarFilters] = useState<ProjectSidebarFilters>(DEFAULT_PROJECT_SIDEBAR_FILTERS);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
@@ -371,9 +382,45 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
                 <h3 className="text-lg font-medium text-foreground mb-2">
                   Select a project
                 </h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  Choose a project from the sidebar to view its repository structure
+                <p className="text-sm text-muted-foreground max-w-sm mb-6">
+                  Choose a project from the sidebar or pick a recent one below
                 </p>
+
+                {/* Recent projects quick menu */}
+                {recentProjects.length > 0 && (
+                  <div className="w-full max-w-md">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                      Recent projects
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {recentProjects.map((project) => {
+                        const iconBg = project.icon.backgroundColor || '#3b82f6';
+                        const iconContent =
+                          project.icon.type === 'emoji'
+                            ? project.icon.value
+                            : project.icon.value.charAt(0).toUpperCase();
+
+                        return (
+                          <button
+                            key={project.id}
+                            onClick={() => selectProject(project)}
+                            className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card/50 hover:bg-card hover:border-primary/30 hover:shadow-md transition-all text-left group"
+                          >
+                            <span
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0 font-medium"
+                              style={{ backgroundColor: iconBg, color: '#fff' }}
+                            >
+                              {iconContent}
+                            </span>
+                            <span className="truncate text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                              {project.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
