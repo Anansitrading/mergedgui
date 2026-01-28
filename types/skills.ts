@@ -75,9 +75,13 @@ export interface Skill {
 
   // Status
   isActive: boolean;
+  isPublic?: boolean;
 
   // Usage stats
   executionCount: number;
+  starCount?: number;
+  rating?: number; // Average rating 0-5
+  ratingCount?: number; // Number of ratings
   lastExecutedAt?: Date;
 
   // Timestamps

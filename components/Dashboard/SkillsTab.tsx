@@ -10,9 +10,7 @@ import { Plus, Search, Filter } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SkillsCategorySidebar } from '../Skills/SkillsCategorySidebar';
 import { SkillEditorPanel } from '../Skills/SkillEditorPanel';
-import { CommunitySkillsView } from '../Skills/CommunitySkillsView';
 import { ExecuteSkillModal } from '../Skills/ExecuteSkillModal';
-import { ConversationalSkillBuilder } from '../Skills';
 import { useSkills } from '../../hooks/useSkills';
 import { useSkillsSubNavigation, type SkillsSubTabType } from '../../hooks/useSkillsSubNavigation';
 import type { Skill } from '../../types/skills';
@@ -21,11 +19,9 @@ import type { Skill } from '../../types/skills';
 const SUB_TABS: { id: SkillsSubTabType; label: string }[] = [
   { id: 'all-skills', label: 'All' },
   { id: 'my-skills', label: 'My Skills' },
-  { id: 'community-skills', label: 'Community' },
 ];
 
 export function SkillsTab() {
-  const [isWizardOpen, setIsWizardOpen] = useState(false);
   const { skills, loading, refetch } = useSkills();
   const { activeSubTab, setActiveSubTab } = useSkillsSubNavigation();
 
@@ -81,6 +77,11 @@ export function SkillsTab() {
   const filteredSkills = useMemo(() => {
     let result = [...skills];
 
+    // Filter by tab: "my-skills" shows only user's own skills
+    if (activeSubTab === 'my-skills') {
+      result = result.filter((skill) => !skill.isPublic);
+    }
+
     // Filter by search
     if (search.trim()) {
       const searchLower = search.toLowerCase();
@@ -91,8 +92,11 @@ export function SkillsTab() {
       );
     }
 
+    // Sort by rating (highest first) for better discovery
+    result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+
     return result;
-  }, [skills, search]);
+  }, [skills, search, activeSubTab]);
 
   // Clear selection when switching tabs
   useEffect(() => {
@@ -150,53 +154,11 @@ export function SkillsTab() {
     refetch();
   }, [refetch]);
 
-  // Render community tab content
-  if (activeSubTab === 'community-skills') {
-    return (
-      <div
-        role="tabpanel"
-        id="tabpanel-skills"
-        aria-labelledby="tab-skills"
-        className="flex flex-col h-full"
-      >
-        {/* Controls Bar */}
-        <div className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
-          <div className="flex items-center justify-between px-6 py-4">
-            {/* Sub-Tab Navigation */}
-            <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
-              {SUB_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveSubTab(tab.id)}
-                  className={cn(
-                    'px-4 py-1.5 text-sm font-medium rounded-md transition-all',
-                    activeSubTab === tab.id
-                      ? 'bg-card text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-          </div>
-        </div>
-
-        {/* Community Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          <CommunitySkillsView onCreateSkill={handleCreateSkill} />
-        </main>
-
-        {/* Conversational Skill Builder */}
-        <ConversationalSkillBuilder
-          isOpen={isWizardOpen}
-          onClose={() => setIsWizardOpen(false)}
-          onCreated={handleSkillCreated}
-        />
-      </div>
-    );
-  }
+  const handleToggleStar = useCallback((skill: Skill, starred: boolean) => {
+    // TODO: Call API to toggle star
+    console.log(`${starred ? 'Starred' : 'Unstarred'} skill:`, skill.name);
+    // For now, just log - in production this would update the backend
+  }, []);
 
   // Render main skills view (All / My Skills)
   return (
@@ -333,6 +295,8 @@ export function SkillsTab() {
               onRun={handleRunSkill}
               onCreated={handleSkillCreated}
               onCancelCreate={handleCancelCreate}
+              onCreateNew={handleCreateSkill}
+              onToggleStar={handleToggleStar}
               isCreatingNew={isCreatingNew}
               className="h-full"
             />

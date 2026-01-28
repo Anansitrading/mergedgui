@@ -558,8 +558,11 @@ export function IntegrationsTab() {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-6">
-        <div className="flex gap-6">
+      <main className={cn(
+        'flex-1 p-6',
+        selectedIntegration ? 'overflow-hidden' : 'overflow-y-auto'
+      )}>
+        <div className="flex gap-6 h-full">
           {/* Filter Sidebar */}
           <FilterSidebar
             filters={sidebarFilters}

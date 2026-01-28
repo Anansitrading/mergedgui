@@ -258,7 +258,7 @@ export function IntegrationDetailPanel({
   };
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col h-full bg-background/50">
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col h-full bg-background/50">
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-border bg-card/30">
         <div className="flex items-center gap-4 min-w-0">
@@ -278,17 +278,54 @@ export function IntegrationDetailPanel({
             <span className="text-sm text-muted-foreground capitalize">{integration.category}</span>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="shrink-0 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          title="Close"
-        >
-          <X size={20} />
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Action Button in Header */}
+          {!integration.isConnected ? (
+            <button
+              onClick={handleConnect}
+              disabled={isConnecting}
+              className="flex items-center justify-center gap-2 px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all disabled:opacity-50"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Link2 className="w-4 h-4" />
+                  {content.ctaText}
+                </>
+              )}
+            </button>
+          ) : integration.connectionStatus === 'warning' ? (
+            <button
+              onClick={() => onReconnect?.(integration.id)}
+              className="flex items-center justify-center gap-2 px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg shadow-lg shadow-amber-500/20 transition-all"
+            >
+              <Link2 className="w-4 h-4" />
+              Reconnect
+            </button>
+          ) : (
+            <button
+              onClick={() => onDisconnect?.(integration.id)}
+              className="flex items-center justify-center gap-2 px-5 py-2 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-lg border border-border transition-colors"
+            >
+              Disconnect
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="shrink-0 p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Close"
+          >
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="max-w-3xl mx-auto p-6 space-y-8">
           {/* Hero Section */}
           <div>
@@ -325,7 +362,7 @@ export function IntegrationDetailPanel({
 
             <p className="text-base text-muted-foreground mb-5">{content.heroSubheader}</p>
 
-            <ul className="space-y-3 mb-6">
+            <ul className="space-y-3">
               {content.heroBullets.map((bullet, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <CheckCircle2 size={18} className="text-emerald-500 shrink-0 mt-0.5" />
@@ -333,44 +370,6 @@ export function IntegrationDetailPanel({
                 </li>
               ))}
             </ul>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              {!integration.isConnected ? (
-                <button
-                  onClick={handleConnect}
-                  disabled={isConnecting}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all disabled:opacity-50"
-                >
-                  {isConnecting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <Link2 className="w-4 h-4" />
-                      {content.ctaText}
-                    </>
-                  )}
-                </button>
-              ) : integration.connectionStatus === 'warning' ? (
-                <button
-                  onClick={() => onReconnect?.(integration.id)}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg shadow-lg shadow-amber-500/20 transition-all"
-                >
-                  <Link2 className="w-4 h-4" />
-                  Reconnect
-                </button>
-              ) : (
-                <button
-                  onClick={() => onDisconnect?.(integration.id)}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 bg-muted hover:bg-muted/80 text-foreground font-medium rounded-lg border border-border transition-colors"
-                >
-                  Disconnect
-                </button>
-              )}
-            </div>
           </div>
 
           {/* What It Does */}

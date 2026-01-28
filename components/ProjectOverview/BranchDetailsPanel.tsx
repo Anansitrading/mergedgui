@@ -460,16 +460,27 @@ export function BranchDetailsPanel({
 
       {/* Footer */}
       <div className="shrink-0 p-3 border-t border-[#1e293b]/40 bg-[#0d1220]/50">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-500">Total context</span>
-          <span className="text-sm font-medium text-emerald-400">
-            {branchData.tokens.toLocaleString()} tokens
-          </span>
-        </div>
-        <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-          <span>{branchData.ingestions.length} ingestions</span>
-          <span>{Math.round(branchData.tokens * 0.043).toLocaleString()} compressed</span>
-        </div>
+        {viewMode === 'hypervisa' ? (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">Total context</span>
+              <span className="text-sm font-medium text-emerald-400">
+                {Math.round(branchData.tokens * 0.043).toLocaleString()} tokens
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+              <span>{branchData.ingestions.length} ingestions</span>
+              <span>{branchData.tokens.toLocaleString()} original</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-500">Files</span>
+            <span className="text-sm font-medium text-slate-300">
+              {branchData.files.filter(f => !f.isFolder).length} files
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

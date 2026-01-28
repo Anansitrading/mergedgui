@@ -968,19 +968,23 @@ export function RightSidebar({
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500">Total context:</span>
                   <span className="text-slate-300 font-medium">
-                    {compressionMetrics ? compressionMetrics.originalTokens.toLocaleString() : '—'} tokens
+                    {compressionMetrics ? compressionMetrics.compressedTokens.toLocaleString() : '—'} tokens
                   </span>
                 </div>
-                <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="mt-1.5 h-1.5 bg-slate-800 rounded-full overflow-hidden flex">
                   <div
-                    className="h-full bg-emerald-600 rounded-full transition-all duration-300"
+                    className="h-full bg-emerald-600 transition-all duration-300"
+                    style={{ width: `${compressionMetrics ? 100 - compressionMetrics.savingsPercent : 0}%` }}
+                  />
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-300"
                     style={{ width: `${compressionMetrics?.savingsPercent ?? 0}%` }}
                   />
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500">
                   <span>{ingestionHistory.length} ingestions</span>
                   <span>
-                    {compressionMetrics ? `${compressionMetrics.compressedTokens.toLocaleString()} compressed` : '—'}
+                    {compressionMetrics ? `${compressionMetrics.originalTokens.toLocaleString()} original` : '—'}
                   </span>
                 </div>
               </>

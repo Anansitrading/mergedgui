@@ -2,7 +2,7 @@
 // Shows skills in collapsible category sections
 
 import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Zap, FileEdit } from 'lucide-react';
+import { ChevronDown, ChevronRight, Zap, FileEdit, Star } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { Skill, SkillCategory } from '../../types/skills';
 
@@ -93,6 +93,9 @@ interface SkillItemProps {
 }
 
 function SkillItem({ skill, isSelected, onSelect }: SkillItemProps) {
+  const rating = skill.rating ?? 0;
+  const hasRating = rating > 0;
+
   return (
     <div
       className={cn(
@@ -106,6 +109,12 @@ function SkillItem({ skill, isSelected, onSelect }: SkillItemProps) {
     >
       <Zap size={14} className={cn('shrink-0', isSelected ? 'text-primary' : 'text-muted-foreground')} />
       <span className="flex-1 text-sm truncate">{skill.name}</span>
+      {hasRating && (
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Star size={12} className="text-amber-400 fill-amber-400" />
+          <span className="text-xs text-muted-foreground tabular-nums">{rating.toFixed(1)}</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -141,9 +150,9 @@ export function SkillsCategorySidebar({
       grouped[skill.category]!.push(skill);
     }
 
-    // Sort skills within each category by execution count (most used first)
+    // Sort skills within each category by rating (highest rated first)
     for (const category of Object.keys(grouped) as SkillCategory[]) {
-      grouped[category]!.sort((a, b) => b.executionCount - a.executionCount);
+      grouped[category]!.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     }
 
     return grouped;
