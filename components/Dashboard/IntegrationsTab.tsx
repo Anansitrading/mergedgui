@@ -4,7 +4,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, Search, LayoutGrid, List, ChevronDown } from 'lucide-react';
+import { Plus, LayoutGrid, List, ChevronDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import {
   IntegrationCard,
@@ -472,20 +472,6 @@ export function IntegrationsTab() {
 
           {/* View Controls */}
           <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="relative w-64 hidden md:block">
-              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                <Search size={16} className="text-muted-foreground" />
-              </div>
-              <input
-                type="text"
-                value={filters.search}
-                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                placeholder="Search integrations..."
-                className="w-full pl-9 pr-4 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-              />
-            </div>
-
             {/* View Toggle */}
             <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
               <button
@@ -558,18 +544,6 @@ export function IntegrationsTab() {
                 </>
               )}
             </div>
-
-            {/* Action Button */}
-            <button
-              onClick={() => {
-                setEditingConnector(undefined);
-                setIsCustomConnectorModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-            >
-              <Plus size={18} />
-              <span>Custom Connector</span>
-            </button>
           </div>
         </div>
       </div>
@@ -578,7 +552,18 @@ export function IntegrationsTab() {
       <main className="flex-1 overflow-y-auto p-6">
         <div className="flex gap-6">
           {/* Filter Sidebar */}
-          <FilterSidebar filters={sidebarFilters} onFiltersChange={setSidebarFilters} />
+          <FilterSidebar
+            filters={sidebarFilters}
+            onFiltersChange={setSidebarFilters}
+            onCreateNew={() => {
+              setEditingConnector(undefined);
+              setIsCustomConnectorModalOpen(true);
+            }}
+            searchQuery={filters.search}
+            onSearchChange={(query) => setFilters({ ...filters, search: query })}
+            integrations={filteredIntegrations}
+            onIntegrationClick={(id) => navigate(`/integration/${id}`)}
+          />
 
           {/* Content */}
           <div className="flex-1 min-w-0">
