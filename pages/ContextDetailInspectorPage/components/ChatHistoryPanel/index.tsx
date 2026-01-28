@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { MessageSquare, Search, X, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { MessageSquare, Search, X, Pencil, Trash2, Loader2, ListChecks } from 'lucide-react';
 import { cn } from '../../../../utils/cn';
 import { useChatHistory } from '../../../../contexts/ChatHistoryContext';
 import { formatRelativeTime } from '../../../../utils/chatHistoryStorage';
@@ -338,6 +338,10 @@ export function ChatHistoryPanel({
   const { state: chatState, loadChat, deleteChat, renameChat } = useChatHistory();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedChatIds, setSelectedChatIds] = useState<Set<string>>(new Set());
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const chatHistory = chatState.historyItems;
   const currentActiveChatId = chatState.activeChatId;
 
@@ -400,7 +404,40 @@ export function ChatHistoryPanel({
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery('');
+    setIsSearchOpen(false);
   }, []);
+
+  const handleToggleSearch = useCallback(() => {
+    setIsSearchOpen(prev => {
+      if (prev) setSearchQuery('');
+      return !prev;
+    });
+  }, []);
+
+  const handleToggleSelectMode = useCallback(() => {
+    setIsSelectMode(prev => {
+      if (prev) setSelectedChatIds(new Set());
+      return !prev;
+    });
+  }, []);
+
+  const handleToggleSelectChat = useCallback((id: string) => {
+    setSelectedChatIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    setShowBulkDeleteConfirm(false);
+    for (const id of selectedChatIds) {
+      await deleteChat(id);
+    }
+    setSelectedChatIds(new Set());
+    setIsSelectMode(false);
+  }, [selectedChatIds, deleteChat]);
 
   return (
     <aside
@@ -417,7 +454,7 @@ export function ChatHistoryPanel({
       }}
     >
       {/* Header */}
-      <div className="shrink-0 px-3 h-10 flex items-center border-b border-[#1e293b]">
+      <div className="shrink-0 px-3 h-10 flex items-center justify-between border-b border-[#1e293b]">
         <div className="flex items-center gap-1.5">
           <MessageSquare size={14} className="text-blue-400" />
           <span className="text-xs text-slate-400 font-medium">
@@ -429,34 +466,99 @@ export function ChatHistoryPanel({
             </span>
           )}
         </div>
-      </div>
-
-      {/* Search Input */}
-      <div className="shrink-0 px-3 py-2 border-b border-[#1e293b]">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none">
-            <Search className="text-gray-500" size={14} />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search chats..."
-            aria-label="Search chats"
-            className="w-full bg-white/5 border border-white/10 rounded-md py-1.5 pl-8 pr-8 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-gray-500"
-          />
-          {searchQuery && (
-            <button
-              onClick={handleClearSearch}
-              className="absolute inset-y-0 right-2 flex items-center"
-            >
-              <span className="p-0.5 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors">
-                <X size={12} />
-              </span>
-            </button>
-          )}
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={handleToggleSearch}
+            className={cn(
+              "p-1.5 rounded transition-colors",
+              isSearchOpen
+                ? "bg-blue-500/20 text-blue-400"
+                : "text-gray-400 hover:bg-white/10 hover:text-white"
+            )}
+            title="Search chats"
+            aria-label="Toggle search"
+          >
+            <Search size={14} />
+          </button>
+          <button
+            onClick={handleToggleSelectMode}
+            className={cn(
+              "p-1.5 rounded transition-colors",
+              isSelectMode
+                ? "bg-blue-500/20 text-blue-400"
+                : "text-gray-400 hover:bg-white/10 hover:text-white"
+            )}
+            title="Select multiple chats"
+            aria-label="Toggle multi-select"
+          >
+            <ListChecks size={14} />
+          </button>
         </div>
       </div>
+
+      {/* Search Input (toggleable) */}
+      {isSearchOpen && (
+        <div className="shrink-0 px-3 py-2 border-b border-[#1e293b]">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none">
+              <Search className="text-gray-500" size={14} />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chats..."
+              aria-label="Search chats"
+              autoFocus
+              className="w-full bg-white/5 border border-white/10 rounded-md py-1.5 pl-8 pr-8 text-xs text-white focus:outline-none focus:border-blue-500/50 transition-colors placeholder:text-gray-500"
+            />
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute inset-y-0 right-2 flex items-center"
+              >
+                <span className="p-0.5 rounded hover:bg-white/10 text-gray-500 hover:text-white transition-colors">
+                  <X size={12} />
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Select mode action bar */}
+      {isSelectMode && (
+        <div className="shrink-0 px-3 py-2 border-b border-[#1e293b] flex items-center justify-between">
+          <span className="text-[11px] text-gray-400">
+            {selectedChatIds.size} selected
+          </span>
+          <div className="flex items-center gap-1.5">
+            {selectedChatIds.size > 0 && (
+              <button
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 size={12} />
+                Delete
+              </button>
+            )}
+            <button
+              onClick={handleToggleSelectMode}
+              className="px-2 py-1 rounded text-[11px] font-medium text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk delete confirmation */}
+      <DeleteConfirmDialog
+        isOpen={showBulkDeleteConfirm}
+        title={`${selectedChatIds.size} chat${selectedChatIds.size !== 1 ? 's' : ''}`}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
@@ -474,14 +576,45 @@ export function ChatHistoryPanel({
                   <GroupHeader label={getGroupLabel(group)} />
                   <div className="px-2 py-1 space-y-0.5">
                     {items.map((item) => (
-                      <ChatHistoryItemComponent
-                        key={item.id}
-                        item={item}
-                        isActive={currentActiveChatId === item.id}
-                        onSelect={() => handleSelectChat(item.id)}
-                        onRename={(newTitle) => handleRenameChat(item.id, newTitle)}
-                        onDelete={() => handleDeleteChat(item.id)}
-                      />
+                      isSelectMode ? (
+                        <div
+                          key={item.id}
+                          onClick={() => handleToggleSelectChat(item.id)}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2.5 rounded-md cursor-pointer transition-all duration-150",
+                            "border border-transparent",
+                            selectedChatIds.has(item.id)
+                              ? "bg-blue-500/10 border-blue-500/30"
+                              : "hover:bg-white/5"
+                          )}
+                        >
+                          <div className={cn(
+                            "w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors",
+                            selectedChatIds.has(item.id)
+                              ? "bg-blue-500 border-blue-500"
+                              : "border-gray-500 hover:border-gray-400"
+                          )}>
+                            {selectedChatIds.has(item.id) && (
+                              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-medium text-white truncate">{item.title}</h4>
+                            <p className="text-[11px] text-gray-400 truncate">{item.preview}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <ChatHistoryItemComponent
+                          key={item.id}
+                          item={item}
+                          isActive={currentActiveChatId === item.id}
+                          onSelect={() => handleSelectChat(item.id)}
+                          onRename={(newTitle) => handleRenameChat(item.id, newTitle)}
+                          onDelete={() => handleDeleteChat(item.id)}
+                        />
+                      )
                     ))}
                   </div>
                 </div>

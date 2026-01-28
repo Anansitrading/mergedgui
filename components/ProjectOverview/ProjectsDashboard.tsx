@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
@@ -12,14 +12,13 @@ import { UserAvatar } from '../Dashboard/UserAvatar';
 import { useProjects } from '../../contexts/ProjectsContext';
 import { Project, ProjectFilter, ProjectSort } from '../../types';
 import { cn } from '../../utils/cn';
-import { ProjectCard } from './ProjectCard';
 import { ProjectCreationModal } from './ProjectCreationModal';
-import { ProjectContextMenu } from './ProjectContextMenu';
 import { UserManagementModal } from './UserManagementModal';
 import { ProjectsFilterSidebar, DEFAULT_PROJECT_SIDEBAR_FILTERS } from './ProjectsFilterSidebar';
 import type { ProjectSidebarFilters, DropTarget } from './ProjectsFilterSidebar';
 import type { ProjectCreationForm } from '../../types/project';
-import { setPendingFileForIngestion } from '../../utils/fileTransferStore';
+import { RepoMindmap } from './RepoMindmap';
+import { getWorktreesForProject } from './repoMindmapData';
 
 interface ProjectsDashboardProps {
   onProjectSelect: (project: Project) => void;
@@ -40,7 +39,7 @@ const SORT_OPTIONS: { id: ProjectSort; label: string }[] = [
   { id: 'sources', label: 'Number of sources' },
 ];
 
-export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = false }: ProjectsDashboardProps) {
+export function ProjectsDashboard({ onOpenSettings, embedded = false }: ProjectsDashboardProps) {
   const navigate = useNavigate();
   const {
     projects,
@@ -54,23 +53,19 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
     setViewMode,
     setSearchQuery,
     createProject,
-    deleteProject,
     updateProject,
+    selectedProject,
+    selectProject,
   } = useProjects();
 
   const [sidebarFilters, setSidebarFilters] = useState<ProjectSidebarFilters>(DEFAULT_PROJECT_SIDEBAR_FILTERS);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{
-    project: Project;
-    x: number;
-    y: number;
-  } | null>(null);
   const [userManagementProject, setUserManagementProject] = useState<Project | null>(null);
 
-  // Navigate to project detail page
-  const handleProjectClick = (project: Project) => {
-    navigate(`/project/${project.id}`);
+  // Show repo mindmap in main content area
+  const handleSidebarProjectClick = (project: Project) => {
+    selectProject(project);
   };
 
   const handleCreateProject = (data: ProjectCreationForm) => {
@@ -83,35 +78,6 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
   // Get existing project names for duplicate checking
   const existingProjectNames = filteredProjects.map(p => p.name);
 
-  const handleMenuClick = (e: React.MouseEvent, project: Project) => {
-    e.stopPropagation();
-    setContextMenu({
-      project,
-      x: e.clientX,
-      y: e.clientY,
-    });
-  };
-
-  const handleDeleteProject = (id: string) => {
-    deleteProject(id);
-    setContextMenu(null);
-  };
-
-  const handleToggleStarred = (id: string) => {
-    const project = projects.find((p) => p.id === id);
-    if (project) {
-      updateProject(id, { starred: !project.starred });
-    }
-  };
-
-  const handleArchiveProject = (id: string) => {
-    updateProject(id, { archived: true });
-  };
-
-  const handleUnarchiveProject = (id: string) => {
-    updateProject(id, { archived: false });
-  };
-
   const handleDropProject = (projectId: string, target: DropTarget) => {
     if (target.type === 'starred') {
       updateProject(projectId, { starred: true });
@@ -121,37 +87,6 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
       updateProject(projectId, { label: target.value });
     }
   };
-
-  const handleFileDropOnProject = (projectId: string, file: File) => {
-    setPendingFileForIngestion(file, projectId);
-    navigate(`/project/${projectId}?openIngestion=file`);
-  };
-
-  // Apply sidebar filters on top of context-filtered projects
-  const displayedProjects = useMemo(() => {
-    let result = [...filteredProjects];
-
-    // Quick filter
-    if (sidebarFilters.quickFilter === 'starred') {
-      result = result.filter((p) => p.starred);
-    } else if (sidebarFilters.quickFilter === 'archived') {
-      result = result.filter((p) => p.archived);
-    } else if (sidebarFilters.quickFilter === 'recent') {
-      result = [...result].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-    }
-
-    // Hide archived by default (unless explicitly viewing archive)
-    if (sidebarFilters.quickFilter !== 'archived') {
-      result = result.filter((p) => !p.archived);
-    }
-
-    // Tag filters (multi-select, OR logic)
-    if (sidebarFilters.selectedTags.length > 0) {
-      result = result.filter((p) => p.label && sidebarFilters.selectedTags.includes(p.label));
-    }
-
-    return result;
-  }, [filteredProjects, sidebarFilters]);
 
   const currentSortLabel = SORT_OPTIONS.find((o) => o.id === sort)?.label || 'Sort';
 
@@ -313,70 +248,28 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
             onFiltersChange={setSidebarFilters}
             projects={projects}
             onDropProject={handleDropProject}
+            onProjectClick={handleSidebarProjectClick}
           />
 
-          {/* Project List */}
+          {/* Repo Mindmap or Empty State */}
           <div className="flex-1 min-w-0">
-            {/* Section Title */}
-            <h2 className="text-lg font-semibold text-muted-foreground mb-4">
-              {filter === 'all'
-                ? 'All projects'
-                : filter === 'mine'
-                ? 'My projects'
-                : 'Shared with me'}
-            </h2>
-
-            {displayedProjects.length === 0 ? (
-              // Empty State
-              <div className="flex flex-col items-center justify-center h-[50vh] text-center">
+            {selectedProject ? (
+              <RepoMindmap
+                project={selectedProject}
+                worktrees={getWorktreesForProject(selectedProject.id)}
+                onBranchClick={(projectId) => navigate(`/project/${projectId}`)}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[60vh] text-center">
                 <div className="p-4 bg-muted/50 rounded-xl border border-border mb-4">
                   <FolderOpen size={40} className="text-muted-foreground" />
                 </div>
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  No projects found
+                  Select a project
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                  {searchQuery
-                    ? 'Try a different search query'
-                    : 'Start by creating your first project to organize your sources'}
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  Choose a project from the sidebar to view its repository structure
                 </p>
-                {!searchQuery && (
-                  <button
-                    onClick={() => setIsNewProjectModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors"
-                  >
-                    <Plus size={18} />
-                    <span>Create new project</span>
-                  </button>
-                )}
-              </div>
-            ) : viewMode === 'grid' ? (
-              // Grid View
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {displayedProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    viewMode="grid"
-                    onClick={() => handleProjectClick(project)}
-                    onMenuClick={(e) => handleMenuClick(e, project)}
-                    onFileDrop={handleFileDropOnProject}
-                  />
-                ))}
-              </div>
-            ) : (
-              // List View
-              <div className="space-y-2">
-                {displayedProjects.map((project) => (
-                  <ProjectCard
-                    key={project.id}
-                    project={project}
-                    viewMode="list"
-                    onClick={() => handleProjectClick(project)}
-                    onMenuClick={(e) => handleMenuClick(e, project)}
-                    onFileDrop={handleFileDropOnProject}
-                  />
-                ))}
               </div>
             )}
           </div>
@@ -390,40 +283,6 @@ export function ProjectsDashboard({ onProjectSelect, onOpenSettings, embedded = 
         onCreate={handleCreateProject}
         existingProjectNames={existingProjectNames}
       />
-
-      {/* Context Menu */}
-      {contextMenu && (
-        <ProjectContextMenu
-          project={contextMenu.project}
-          x={contextMenu.x}
-          y={contextMenu.y}
-          onClose={() => setContextMenu(null)}
-          onDelete={() => handleDeleteProject(contextMenu.project.id)}
-          onConfigureIngestion={() => {
-            navigate(`/project/${contextMenu.project.id}?openIngestion=true`);
-            setContextMenu(null);
-          }}
-          onShare={() => {
-            setUserManagementProject(contextMenu.project);
-            setContextMenu(null);
-          }}
-          onUpdateProject={(updates) => {
-            updateProject(contextMenu.project.id, updates);
-          }}
-          onToggleStarred={() => {
-            handleToggleStarred(contextMenu.project.id);
-            setContextMenu(null);
-          }}
-          onArchive={() => {
-            handleArchiveProject(contextMenu.project.id);
-            setContextMenu(null);
-          }}
-          onUnarchive={() => {
-            handleUnarchiveProject(contextMenu.project.id);
-            setContextMenu(null);
-          }}
-        />
-      )}
 
       {/* User Management Modal */}
       {userManagementProject && (
