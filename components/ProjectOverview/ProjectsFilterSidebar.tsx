@@ -171,7 +171,7 @@ export function ProjectsFilterSidebar({
         onMouseDown={handleResizeStart}
         className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
       />
-      <div className="pr-4 border-r border-border h-full">
+      <div className="pr-4 border-r border-border h-full overflow-y-auto">
       {/* Create New Button */}
       <div className="mb-5">
         <button
