@@ -1,13 +1,13 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Plus, Clock, Star, Archive, ChevronRight, ChevronDown } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Plus, Filter, X, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { Project } from '../../types';
 
-const SIDEBAR_MIN_WIDTH = 160;
+const SIDEBAR_MIN_WIDTH = 200;
 const SIDEBAR_MAX_WIDTH = 400;
-const SIDEBAR_DEFAULT_WIDTH = 208;
+const SIDEBAR_DEFAULT_WIDTH = 240;
 
-export type QuickFilter = 'recent' | 'starred' | 'archived' | null;
+export type QuickFilter = 'starred' | 'archived' | null;
 
 export interface ProjectSidebarFilters {
   quickFilter: QuickFilter;
@@ -25,19 +25,14 @@ export interface DropTarget {
 }
 
 interface ProjectsFilterSidebarProps {
+  projects: Project[];
+  allTags: string[];
   filters: ProjectSidebarFilters;
   onFiltersChange: (filters: ProjectSidebarFilters) => void;
-  projects: Project[];
-  onDropProject?: (projectId: string, target: DropTarget) => void;
+  activeFilterCount: number;
   onProjectClick?: (project: Project) => void;
   onCreateNew?: () => void;
 }
-
-const QUICK_FILTERS: { value: QuickFilter; label: string; icon: React.ElementType; droppable?: boolean }[] = [
-  { value: 'recent', label: 'Recent', icon: Clock },
-  { value: 'starred', label: 'Starred', icon: Star, droppable: true },
-  { value: 'archived', label: 'Archive', icon: Archive, droppable: true },
-];
 
 function SidebarProjectItem({
   project,
@@ -54,34 +49,33 @@ function SidebarProjectItem({
 
   return (
     <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick();
-      }}
-      className="flex items-center gap-2 w-full text-left pl-8 pr-2 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors group"
+      onClick={onClick}
+      className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors group"
     >
       <span
-        className="w-4 h-4 rounded flex items-center justify-center text-[8px] shrink-0 font-medium"
+        className="w-6 h-6 rounded flex items-center justify-center text-xs shrink-0 font-medium"
         style={{ backgroundColor: iconBg, color: '#fff' }}
       >
         {iconContent}
       </span>
-      <span className="truncate">{project.name}</span>
+      <span className="truncate flex-1">{project.name}</span>
     </button>
   );
 }
 
 export function ProjectsFilterSidebar({
+  projects,
+  allTags,
   filters,
   onFiltersChange,
-  projects,
-  onDropProject,
+  activeFilterCount,
   onProjectClick,
   onCreateNew,
 }: ProjectsFilterSidebarProps) {
-  const [dragOverTarget, setDragOverTarget] = useState<string | null>(null);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['quick-recent', 'section-tags']));
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -118,49 +112,6 @@ export function ProjectsFilterSidebar({
     };
   }, []);
 
-  const toggleExpanded = (key: string) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  // Derive unique tags from all projects
-  const allTags = Array.from(
-    new Set(projects.map((p) => p.label).filter((l): l is string => !!l))
-  ).sort();
-
-  // Compute projects per category
-  const projectsByCategory = useMemo(() => {
-    const recent = [...projects]
-      .filter((p) => !p.archived)
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-      .slice(0, 4);
-    const starred = projects.filter((p) => p.starred);
-    const archived = projects.filter((p) => p.archived);
-    const byTag: Record<string, Project[]> = {};
-    for (const tag of allTags) {
-      byTag[tag] = projects.filter((p) => p.label === tag);
-    }
-    return { recent, starred, archived, byTag };
-  }, [projects, allTags]);
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, target: DropTarget) => {
-    e.preventDefault();
-    setDragOverTarget(null);
-    const projectId = e.dataTransfer.getData('text/projectId');
-    if (projectId && onDropProject) {
-      onDropProject(projectId, target);
-    }
-  };
-
   return (
     <aside
       className="shrink-0 relative"
@@ -171,191 +122,182 @@ export function ProjectsFilterSidebar({
         onMouseDown={handleResizeStart}
         className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
       />
-      <div className="pr-4 border-r border-border h-full overflow-y-auto">
-      {/* Create New Button */}
-      <div className="mb-5">
-        <button
-          onClick={onCreateNew}
-          className="flex items-center justify-center gap-2 w-full px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-        >
-          <Plus size={16} />
-          <span>New</span>
-        </button>
-      </div>
-
-      {/* Category Tree */}
-      <div className="mb-5">
-        <div className="flex flex-col gap-0.5">
-          {QUICK_FILTERS.map((option) => {
-            const Icon = option.icon;
-            const categoryKey = `quick-${option.value}`;
-            const isExpanded = expandedCategories.has(categoryKey);
-            const isDragOver = dragOverTarget === categoryKey;
-            const categoryProjects =
-              option.value === 'recent'
-                ? projectsByCategory.recent
-                : option.value === 'starred'
-                ? projectsByCategory.starred
-                : option.value === 'archived'
-                ? projectsByCategory.archived
-                : [];
-            const count = categoryProjects.length;
-            const hasProjects = count > 0;
-
-            return (
-              <div key={option.value}>
-                {/* Category header row */}
-                <button
-                  onClick={() => {
-                    if (hasProjects) toggleExpanded(categoryKey);
-                  }}
-                  onDragOver={option.droppable ? handleDragOver : undefined}
-                  onDragEnter={option.droppable ? () => setDragOverTarget(categoryKey) : undefined}
-                  onDragLeave={option.droppable ? () => setDragOverTarget(null) : undefined}
-                  onDrop={
-                    option.droppable
-                      ? (e) => handleDrop(e, { type: option.value as 'starred' | 'archived' })
-                      : undefined
-                  }
-                  className={cn(
-                    'flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors',
-                    isExpanded
-                      ? 'text-foreground bg-muted/50'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                    !hasProjects && 'opacity-50',
-                    isDragOver && 'ring-2 ring-primary bg-primary/10 text-primary'
-                  )}
-                >
-                  {/* Chevron */}
-                  {hasProjects ? (
-                    isExpanded ? (
-                      <ChevronDown size={12} className="shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight size={12} className="shrink-0 text-muted-foreground" />
-                    )
-                  ) : (
-                    <span className="w-3 shrink-0" />
-                  )}
-                  <Icon size={14} className="shrink-0" />
-                  <span className="flex-1">{option.label}</span>
-                  <span
-                    className={cn(
-                      'text-xs tabular-nums',
-                      isExpanded ? 'text-foreground/60' : 'text-muted-foreground/60'
-                    )}
-                  >
-                    {count}
-                  </span>
-                </button>
-
-                {/* Expanded project list */}
-                {isExpanded && hasProjects && (
-                  <div className="flex flex-col gap-0.5 mt-0.5 mb-1 max-h-48 overflow-y-auto">
-                    {categoryProjects.map((project) => (
-                      <SidebarProjectItem
-                        key={project.id}
-                        project={project}
-                        onClick={() => onProjectClick?.(project)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Tags Section */}
-      {allTags.length > 0 && (
-        <div className="mb-5">
+      <div className="pr-4 border-r border-border h-full overflow-y-auto flex flex-col">
+        {/* Create New Button + Filter */}
+        <div className="flex gap-2 mb-4">
           <button
-            onClick={() => toggleExpanded('section-tags')}
-            className="flex items-center gap-2 w-full text-left mb-2"
+            onClick={onCreateNew}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
           >
-            {expandedCategories.has('section-tags') ? (
-              <ChevronDown size={12} className="shrink-0 text-muted-foreground" />
-            ) : (
-              <ChevronRight size={12} className="shrink-0 text-muted-foreground" />
-            )}
-            <span className="text-xs font-semibold text-foreground uppercase tracking-wider">
-              Tags
-            </span>
+            <Plus size={16} />
+            <span>New</span>
           </button>
-          {expandedCategories.has('section-tags') && <div className="flex flex-col gap-0.5">
-            {allTags.map((tag) => {
-              const categoryKey = `tag-${tag}`;
-              const isExpanded = expandedCategories.has(categoryKey);
-              const isDragOver = dragOverTarget === categoryKey;
-              const tagProjects = projectsByCategory.byTag[tag] || [];
-              const tagCount = tagProjects.length;
-              const hasProjects = tagCount > 0;
 
-              return (
-                <div key={tag}>
-                  {/* Tag header row */}
-                  <button
-                    onClick={() => {
-                      if (hasProjects) toggleExpanded(categoryKey);
-                    }}
-                    onDragOver={handleDragOver}
-                    onDragEnter={() => setDragOverTarget(categoryKey)}
-                    onDragLeave={() => setDragOverTarget(null)}
-                    onDrop={(e) => handleDrop(e, { type: 'tag', value: tag })}
-                    className={cn(
-                      'flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md text-sm transition-colors',
-                      isExpanded
-                        ? 'text-foreground bg-muted/50'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
-                      !hasProjects && 'opacity-50',
-                      isDragOver && 'ring-2 ring-primary bg-primary/10 text-primary'
+          {/* Filter Button */}
+          <div className="relative">
+            <button
+              ref={filterButtonRef}
+              onClick={() => {
+                if (!isFilterDropdownOpen && filterButtonRef.current) {
+                  const rect = filterButtonRef.current.getBoundingClientRect();
+                  setDropdownPosition({
+                    top: rect.bottom + 8,
+                    left: rect.left,
+                  });
+                }
+                setIsFilterDropdownOpen(!isFilterDropdownOpen);
+              }}
+              className={cn(
+                'flex items-center justify-center p-2 border rounded-lg transition-colors',
+                activeFilterCount > 0
+                  ? 'bg-primary/10 border-primary/30 text-primary'
+                  : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+              )}
+              title="Filter projects"
+            >
+              <Filter size={16} />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center text-[10px] font-medium bg-primary text-primary-foreground rounded-full">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {isFilterDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsFilterDropdownOpen(false)}
+                />
+                <div
+                  className="fixed min-w-[220px] bg-card border border-border rounded-lg shadow-xl z-50 py-3"
+                  style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+                >
+                  {/* Header with clear button */}
+                  <div className="flex items-center justify-between px-4 pb-3 border-b border-border mb-3">
+                    <span className="text-sm font-medium text-foreground">Filters</span>
+                    {activeFilterCount > 0 && (
+                      <button
+                        onClick={() => onFiltersChange(DEFAULT_PROJECT_SIDEBAR_FILTERS)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X size={12} />
+                        Clear all
+                      </button>
                     )}
-                  >
-                    {/* Chevron */}
-                    {hasProjects ? (
-                      isExpanded ? (
-                        <ChevronDown size={12} className="shrink-0 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight size={12} className="shrink-0 text-muted-foreground" />
-                      )
-                    ) : (
-                      <span className="w-3 shrink-0" />
-                    )}
-                    <span
-                      className={cn(
-                        'w-1.5 h-1.5 rounded-full shrink-0',
-                        isExpanded || isDragOver ? 'bg-primary' : 'bg-muted-foreground/40'
-                      )}
-                    />
-                    <span className="flex-1">{tag}</span>
-                    <span
-                      className={cn(
-                        'text-xs tabular-nums',
-                        isExpanded ? 'text-foreground/60' : 'text-muted-foreground/60'
-                      )}
-                    >
-                      {tagCount}
+                  </div>
+
+                  {/* Status Filters */}
+                  <div className="px-4 mb-4">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                      Status
                     </span>
-                  </button>
+                    <div className="flex flex-col gap-1">
+                      {(['starred', 'archived'] as const).map((status) => {
+                        const isActive = filters.quickFilter === status;
+                        return (
+                          <button
+                            key={status}
+                            onClick={() =>
+                              onFiltersChange({
+                                ...filters,
+                                quickFilter: isActive ? null : status,
+                              })
+                            }
+                            className={cn(
+                              'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                              isActive
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-foreground hover:bg-muted'
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                isActive
+                                  ? 'bg-primary border-primary'
+                                  : 'border-muted-foreground/40'
+                              )}
+                            >
+                              {isActive && <Check size={12} className="text-primary-foreground" />}
+                            </span>
+                            <span className="capitalize">{status}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-                  {/* Expanded project list */}
-                  {isExpanded && hasProjects && (
-                    <div className="flex flex-col gap-0.5 mt-0.5 mb-1 max-h-48 overflow-y-auto">
-                      {tagProjects.map((project) => (
-                        <SidebarProjectItem
-                          key={project.id}
-                          project={project}
-                          onClick={() => onProjectClick?.(project)}
-                        />
-                      ))}
+                  {/* Tag Filters */}
+                  {allTags.length > 0 && (
+                    <div className="px-4">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                        Tags
+                      </span>
+                      <div className="flex flex-col gap-1">
+                        {allTags.map((tag) => {
+                          const isSelected = filters.selectedTags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              onClick={() =>
+                                onFiltersChange({
+                                  ...filters,
+                                  selectedTags: isSelected
+                                    ? filters.selectedTags.filter((t) => t !== tag)
+                                    : [...filters.selectedTags, tag],
+                                })
+                              }
+                              className={cn(
+                                'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                isSelected
+                                  ? 'bg-primary/10 text-primary'
+                                  : 'text-foreground hover:bg-muted'
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                  isSelected
+                                    ? 'bg-primary border-primary'
+                                    : 'border-muted-foreground/40'
+                                )}
+                              >
+                                {isSelected && <Check size={12} className="text-primary-foreground" />}
+                              </span>
+                              <span>{tag}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>}
+              </>
+            )}
+          </div>
         </div>
-      )}
+
+        {/* Projects List */}
+        <div className="flex-1 min-h-0">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Projects ({projects.length})
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {projects.map((project) => (
+              <SidebarProjectItem
+                key={project.id}
+                project={project}
+                onClick={() => onProjectClick?.(project)}
+              />
+            ))}
+            {projects.length === 0 && (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No projects found
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     </aside>
   );

@@ -43,9 +43,11 @@ function WorkspaceView() {
   // Show Dashboard with tabs when no project is selected
   if (!selectedProject) {
     return (
-      <div className="h-screen w-screen overflow-hidden bg-background text-foreground font-sans selection:bg-primary/30">
-        <Dashboard onProjectSelect={handleProjectSelect} />
-      </div>
+      <IngestionProvider>
+        <div className="h-screen w-screen overflow-hidden bg-background text-foreground font-sans selection:bg-primary/30">
+          <Dashboard onProjectSelect={handleProjectSelect} />
+        </div>
+      </IngestionProvider>
     );
   }
 

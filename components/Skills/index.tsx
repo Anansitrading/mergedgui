@@ -22,6 +22,9 @@ export { CommunitySkillsView } from './CommunitySkillsView';
 export { SkillsFilterSidebar, DEFAULT_SKILLS_SIDEBAR_FILTERS } from './SkillsFilterSidebar';
 export type { SkillsSidebarFilters, SkillsQuickFilter } from './SkillsFilterSidebar';
 
+// Skills Library Redesign: Category Sidebar (skills grouped by category)
+export { SkillsCategorySidebar } from './SkillsCategorySidebar';
+
 // Skills Library Redesign: Supporting Components
 export { SkillsSortDropdown } from './SkillsSortDropdown';
 export { SkillsAnalyticsSummary } from './SkillsAnalyticsSummary';
@@ -29,6 +32,9 @@ export { CreateCustomSkillCard } from './CreateCustomSkillCard';
 
 // Skills Library Redesign: Custom Skill Wizard
 export { CustomSkillWizard } from './CustomSkillWizard';
+
+// Conversational Skill Builder (new 3-panel layout)
+export { ConversationalSkillBuilder } from './ConversationalSkillBuilder';
 
 // Task 2_3: Create Skill Form Components
 export { CreateSkillModal } from './CreateSkillModal';

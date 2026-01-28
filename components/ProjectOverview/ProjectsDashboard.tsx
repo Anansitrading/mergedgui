@@ -14,12 +14,14 @@ import { cn } from '../../utils/cn';
 import { ProjectCreationModal } from './ProjectCreationModal';
 import { UserManagementModal } from './UserManagementModal';
 import { ProjectsFilterSidebar, DEFAULT_PROJECT_SIDEBAR_FILTERS } from './ProjectsFilterSidebar';
-import type { ProjectSidebarFilters, DropTarget } from './ProjectsFilterSidebar';
+import type { ProjectSidebarFilters } from './ProjectsFilterSidebar';
 import type { ProjectCreationForm } from '../../types/project';
 import { RepoMindmap } from './RepoMindmap';
 import { RepoListView } from './RepoListView';
 import { getWorktreesForProject } from './repoMindmapData';
-import { IngestionWizard } from '../Hypervisa/IngestionWizard';
+import { IngestionModal } from '../../pages/ContextDetailInspectorPage/components/IngestionModal';
+import { useIngestion } from '../../contexts/IngestionContext';
+import { BranchDetailsPanel } from './BranchDetailsPanel';
 
 interface ProjectsDashboardProps {
   onProjectSelect: (project: Project) => void;
@@ -54,7 +56,6 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
     setViewMode,
     setSearchQuery,
     createProject,
-    updateProject,
     selectedProject,
     selectProject,
   } = useProjects();
@@ -69,11 +70,40 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
     [projects],
   );
 
+  const { openIngestionModalEmpty } = useIngestion();
   const [sidebarFilters, setSidebarFilters] = useState<ProjectSidebarFilters>(DEFAULT_PROJECT_SIDEBAR_FILTERS);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [userManagementProject, setUserManagementProject] = useState<Project | null>(null);
-  const [ingestionWorktreeId, setIngestionWorktreeId] = useState<string | null>(null);
+  const [branchDetails, setBranchDetails] = useState<{ worktreeId: string; branchName: string } | null>(null);
+
+  // Derive unique tags from all projects
+  const allTags = useMemo(
+    () => Array.from(new Set(projects.map((p) => p.label).filter((l): l is string => !!l))).sort(),
+    [projects]
+  );
+
+  const activeFilterCount = (sidebarFilters.quickFilter ? 1 : 0) + sidebarFilters.selectedTags.length;
+
+  // Filter projects based on sidebar filters (tags and status)
+  // When no filter is set, show all projects
+  const displayedProjects = useMemo(() => {
+    let result = filteredProjects;
+
+    // Apply status filters
+    if (sidebarFilters.quickFilter === 'starred') {
+      result = result.filter((p) => p.starred);
+    } else if (sidebarFilters.quickFilter === 'archived') {
+      result = result.filter((p) => p.archived);
+    }
+
+    // Apply tag filters
+    if (sidebarFilters.selectedTags.length > 0) {
+      result = result.filter((p) => p.label && sidebarFilters.selectedTags.includes(p.label));
+    }
+
+    return result;
+  }, [filteredProjects, sidebarFilters]);
 
   // Worktrees state – seeded from static data, mutated by context-menu actions
   const [worktreesOverrides, setWorktreesOverrides] = useState<Record<string, WorktreeWithBranches[]>>({});
@@ -166,16 +196,22 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
   );
 
   const handleWorktreeNewIngestion = useCallback(
-    (worktreeId: string) => {
-      setIngestionWorktreeId(worktreeId);
+    (_worktreeId: string) => {
+      openIngestionModalEmpty();
+    },
+    [openIngestionModalEmpty],
+  );
+
+  const handleBranchDetails = useCallback(
+    (worktreeId: string, branchName: string) => {
+      setBranchDetails({ worktreeId, branchName });
     },
     [],
   );
 
-  // Show repo mindmap in main content area
-  const handleSidebarProjectClick = (project: Project) => {
-    selectProject(project);
-  };
+  const handleCloseBranchDetails = useCallback(() => {
+    setBranchDetails(null);
+  }, []);
 
   const handleCreateProject = (data: ProjectCreationForm) => {
     const newProject = createProject(data.name);
@@ -186,16 +222,6 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
 
   // Get existing project names for duplicate checking
   const existingProjectNames = filteredProjects.map(p => p.name);
-
-  const handleDropProject = (projectId: string, target: DropTarget) => {
-    if (target.type === 'starred') {
-      updateProject(projectId, { starred: true });
-    } else if (target.type === 'archived') {
-      updateProject(projectId, { archived: true });
-    } else if (target.type === 'tag' && target.value) {
-      updateProject(projectId, { label: target.value });
-    }
-  };
 
   const currentSortLabel = SORT_OPTIONS.find((o) => o.id === sort)?.label || 'Sort';
 
@@ -234,7 +260,11 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
             {FILTER_TABS.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setFilter(tab.id)}
+                onClick={() => {
+                  setFilter(tab.id);
+                  // Reset filters when switching tabs
+                  setSidebarFilters(DEFAULT_PROJECT_SIDEBAR_FILTERS);
+                }}
                 className={cn(
                   'px-4 py-1.5 text-sm font-medium rounded-md transition-all',
                   filter === tab.id
@@ -336,7 +366,7 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
               )}
             </div>
 
-          </div>
+                      </div>
         </div>
       </div>
 
@@ -345,16 +375,18 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
         <div className="flex gap-6 h-full">
           {/* Filter Sidebar */}
           <ProjectsFilterSidebar
+            projects={displayedProjects}
+            allTags={allTags}
             filters={sidebarFilters}
             onFiltersChange={setSidebarFilters}
-            projects={filteredProjects}
-            onDropProject={handleDropProject}
-            onProjectClick={handleSidebarProjectClick}
+            activeFilterCount={activeFilterCount}
+            onProjectClick={selectProject}
             onCreateNew={() => setIsNewProjectModalOpen(true)}
           />
 
           {/* Repo Mindmap or Empty State */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex gap-0">
+            <div className={cn("flex-1 min-w-0", branchDetails && "pr-0")}>
             {selectedProject ? (
               viewMode === 'grid' ? (
                 <RepoMindmap
@@ -365,8 +397,8 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
                   onRenameWorktree={(worktreeId, newName) => handleRenameWorktree(selectedProject.id, worktreeId, newName)}
                   onWorktreeNewIngestion={handleWorktreeNewIngestion}
                   onBranchOpen={() => navigate(`/project/${selectedProject.id}`)}
-                  onBranchNewIngestion={() => navigate(`/project/${selectedProject.id}`)}
-                  onBranchDetails={() => navigate(`/project/${selectedProject.id}`)}
+                  onBranchNewIngestion={() => openIngestionModalEmpty()}
+                  onBranchDetails={handleBranchDetails}
                   onRenameBranch={(worktreeId, oldName, newName) => handleRenameBranch(selectedProject.id, worktreeId, oldName, newName)}
                   onAddBranch={(worktreeId) => handleAddBranch(selectedProject.id, worktreeId)}
                 />
@@ -379,8 +411,8 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
                   onRenameWorktree={(worktreeId, newName) => handleRenameWorktree(selectedProject.id, worktreeId, newName)}
                   onWorktreeNewIngestion={handleWorktreeNewIngestion}
                   onBranchOpen={() => navigate(`/project/${selectedProject.id}`)}
-                  onBranchNewIngestion={() => navigate(`/project/${selectedProject.id}`)}
-                  onBranchDetails={() => navigate(`/project/${selectedProject.id}`)}
+                  onBranchNewIngestion={() => openIngestionModalEmpty()}
+                  onBranchDetails={handleBranchDetails}
                   onRenameBranch={(worktreeId, oldName, newName) => handleRenameBranch(selectedProject.id, worktreeId, oldName, newName)}
                   onAddBranch={(worktreeId) => handleAddBranch(selectedProject.id, worktreeId)}
                 />
@@ -434,6 +466,16 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
                 )}
               </div>
             )}
+            </div>
+
+            {/* Branch Details Panel */}
+            {branchDetails && (
+              <BranchDetailsPanel
+                branchName={branchDetails.branchName}
+                worktreeId={branchDetails.worktreeId}
+                onClose={handleCloseBranchDetails}
+              />
+            )}
           </div>
         </div>
       </main>
@@ -455,23 +497,11 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
         />
       )}
 
-      {/* Ingestion Wizard Modal */}
-      {selectedProject && ingestionWorktreeId && (
-        <IngestionWizard
-          isOpen={!!ingestionWorktreeId}
-          onClose={() => setIngestionWorktreeId(null)}
-          file={{
-            id: `worktree-${ingestionWorktreeId}`,
-            name: worktreesOverrides[selectedProject.id]?.find(wt => wt.id === ingestionWorktreeId)?.name
-              ?? getWorktreesForProject(selectedProject.id).find(wt => wt.id === ingestionWorktreeId)?.name
-              ?? 'New Ingestion',
-            size: '',
-          }}
+      {/* Ingestion Modal with source picker */}
+      {selectedProject && (
+        <IngestionModal
           projectName={selectedProject.name}
-          onSubmit={async (config) => {
-            console.log('Ingestion config submitted for worktree:', ingestionWorktreeId, config);
-            setIngestionWorktreeId(null);
-          }}
+          projectId={selectedProject.id}
         />
       )}
     </div>
