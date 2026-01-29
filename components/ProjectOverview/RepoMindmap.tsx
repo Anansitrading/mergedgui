@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { Copy, Pencil, ExternalLink, FileUp, GitBranchPlus, ZoomIn, ZoomOut, Maximize2, MoreVertical, Plus, FolderPlus, Trash2 } from 'lucide-react';
+import { Copy, Pencil, ExternalLink, FileUp, GitFork, ZoomIn, ZoomOut, Maximize2, MoreVertical, Plus, FolderPlus, Trash2 } from 'lucide-react';
 import type { Project, WorktreeWithBranches, Branch } from '../../types';
 
 // Layout constants
@@ -151,6 +151,7 @@ interface RepoMindmapProps {
   onBranchNewIngestion?: (worktreeId: string, branchName: string) => void;
   onRenameBranch?: (worktreeId: string, oldName: string, newName: string) => void;
   onAddBranch?: (worktreeId: string) => void;
+  onForkBranch?: (worktreeId: string, sourceBranchName: string) => void;
   onAddWorktree?: () => void;
   onDeleteWorktree?: (worktreeId: string) => void;
   onBranchHover?: (worktreeId: string, branchName: string) => void;
@@ -159,7 +160,7 @@ interface RepoMindmapProps {
 export function RepoMindmap({
   project, worktrees, onBranchClick,
   onDuplicateWorktree, onRenameWorktree, onWorktreeNewIngestion,
-  onBranchOpen, onBranchNewIngestion, onRenameBranch, onAddBranch, onAddWorktree, onDeleteWorktree,
+  onBranchOpen, onBranchNewIngestion, onRenameBranch, onAddBranch, onForkBranch, onAddWorktree, onDeleteWorktree,
   onBranchHover,
 }: RepoMindmapProps) {
   const layout = useMemo(() => computeLayout(worktrees), [worktrees]);
@@ -366,17 +367,17 @@ export function RepoMindmap({
                 {/* Worktree node (folder shape) */}
                 <path
                   d={folderPath(wt.x, wt.y, WT_W, WT_H)}
-                  fill="#141a2a"
-                  stroke={hoveredWorktree === wt.id ? color.accent : color.border}
-                  strokeWidth={hoveredWorktree === wt.id ? 2 : 1.5}
+                  fill={showGhostBranch === wt.id ? color.bg : '#141a2a'}
+                  stroke={showGhostBranch === wt.id || hoveredWorktree === wt.id ? color.accent : color.border}
+                  strokeWidth={showGhostBranch === wt.id ? 2.5 : hoveredWorktree === wt.id ? 2 : 1.5}
                   style={{ cursor: 'pointer', transition: 'all 150ms ease' }}
                   onMouseEnter={() => setHoveredWorktree(wt.id)}
                   onMouseLeave={() => setHoveredWorktree(null)}
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Toggle ghost worktree preview
+                    // Toggle ghost worktree AND ghost branch for this worktree
                     setShowGhostWorktree((prev) => !prev);
-                    setShowGhostBranch(null);
+                    setShowGhostBranch((prev) => (prev === wt.id ? null : wt.id));
                   }}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -473,11 +474,8 @@ export function RepoMindmap({
                   return (
                     <g
                       key={br.name}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Toggle ghost branch for this worktree
-                        setShowGhostBranch((prev) => (prev === wt.id ? null : wt.id));
-                        setShowGhostWorktree(false);
+                      onDoubleClick={() => {
+                        // Navigate to branch detail on double-click
                         onBranchClick(project.id, wt.id, br.name);
                       }}
                       onContextMenu={(e) => {
@@ -725,70 +723,86 @@ export function RepoMindmap({
             );
           })()}
 
-          {/* Ghost branch preview - appears below last branch of hovered worktree */}
-          {hoveredBranch && (() => {
-            const [worktreeId] = hoveredBranch.split('-');
-            const wtIdx = layout.worktrees.findIndex(wt => wt.id === worktreeId);
+          {/* Ghost branch preview - appears below the last branch (orphan branch) */}
+          {showGhostBranch && (() => {
+            const wtIdx = layout.worktrees.findIndex(wt => wt.id === showGhostBranch);
             if (wtIdx === -1) return null;
             const wt = layout.worktrees[wtIdx];
             const color = COLORS[wtIdx % COLORS.length];
             const lastBranch = wt.branches[wt.branches.length - 1];
             if (!lastBranch) return null;
 
-            const ghostY = lastBranch.y + BR_GAP;
+            // Check if placing below would overlap with next worktree
+            const nextWt = layout.worktrees[wtIdx + 1];
+            const belowY = lastBranch.y + BR_H + BR_GAP / 2;
+            const wouldOverlap = nextWt && (belowY + BR_H > nextWt.y - 10);
+
+            // Position: below if no overlap, to the right if overlap
+            const ghostX = wouldOverlap ? lastBranch.x + BR_W + 24 : lastBranch.x;
+            const ghostY = wouldOverlap ? lastBranch.y : belowY;
             const ghostCenterY = ghostY + BR_H / 2;
-            const wtCenterY = wt.y + WT_H / 2;
+
+            // Connector path depends on position
             const startX = wt.x + WT_W;
-            const endX = lastBranch.x;
-            const cpX = startX + (endX - startX) / 2;
-            const connectorPath = `M${startX},${wtCenterY} C${cpX},${wtCenterY} ${cpX},${ghostCenterY} ${endX},${ghostCenterY}`;
+            const startY = wt.y + WT_H / 2;
+            let connectorPath: string;
+            if (wouldOverlap) {
+              // Horizontal line from last branch to ghost
+              connectorPath = `M${lastBranch.x + BR_W},${ghostCenterY} L${ghostX},${ghostCenterY}`;
+            } else {
+              // Bezier curve from worktree
+              const cpX = startX + (ghostX - startX) / 2;
+              connectorPath = `M${startX},${startY} C${cpX},${startY} ${cpX},${ghostCenterY} ${ghostX},${ghostCenterY}`;
+            }
 
             return (
               <g
-                style={{ cursor: 'pointer', opacity: 0.5 }}
+                style={{ cursor: 'pointer' }}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onAddBranch?.(worktreeId);
+                  onAddBranch?.(showGhostBranch);
+                  setShowGhostBranch(null);
+                  setShowGhostWorktree(false);
                 }}
               >
-                {/* Ghost connector */}
+                {/* Ghost connector - bezier curve from worktree */}
                 <path
                   d={connectorPath}
                   fill="none"
                   stroke={color.accent}
-                  strokeWidth={1.5}
-                  strokeDasharray="4 4"
-                  strokeOpacity={0.4}
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.7}
                 />
                 {/* Ghost dot */}
                 <circle
-                  cx={lastBranch.x}
+                  cx={ghostX}
                   cy={ghostCenterY}
-                  r={4.5}
+                  r={5}
                   fill={color.accent}
-                  fillOpacity={0.4}
+                  fillOpacity={0.7}
                 />
                 {/* Ghost branch rect */}
                 <rect
-                  x={lastBranch.x}
+                  x={ghostX}
                   y={ghostY}
                   width={BR_W}
                   height={BR_H}
                   rx={8}
                   fill="#1a1f2e"
                   stroke={color.accent}
-                  strokeWidth={1}
+                  strokeWidth={1.5}
                   strokeDasharray="6 4"
-                  strokeOpacity={0.6}
+                  strokeOpacity={0.8}
                 />
                 {/* Plus icon */}
                 <Plus
-                  x={lastBranch.x + BR_W / 2 - 10}
+                  x={ghostX + BR_W / 2 - 10}
                   y={ghostY + BR_H / 2 - 10}
                   width={20}
                   height={20}
                   stroke={color.accent}
-                  strokeWidth={1.5}
+                  strokeWidth={2}
                 />
               </g>
             );
@@ -919,12 +933,12 @@ export function RepoMindmap({
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-slate-100 transition-colors"
                   onClick={() => {
-                    onAddBranch?.(ctxMenu.worktreeId);
+                    onForkBranch?.(ctxMenu.worktreeId, ctxMenu.branchName);
                     setCtxMenu(null);
                   }}
                 >
-                  <GitBranchPlus size={14} className="shrink-0 opacity-60" />
-                  + Branch
+                  <GitFork size={14} className="shrink-0 opacity-60" />
+                  Fork
                 </button>
               </>
             )}

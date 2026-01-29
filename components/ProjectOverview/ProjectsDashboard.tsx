@@ -206,6 +206,38 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
     [],
   );
 
+  const handleForkBranch = useCallback(
+    (projectId: string, worktreeId: string, sourceBranchName: string) => {
+      setWorktreesOverrides((prev) => {
+        const current = prev[projectId] ?? getWorktreesForProject(projectId);
+        return {
+          ...prev,
+          [projectId]: current.map((wt) => {
+            if (wt.id !== worktreeId) return wt;
+            const sourceBranch = wt.branches.find((br) => br.name === sourceBranchName);
+            if (!sourceBranch) return wt;
+            const newName = `${sourceBranchName}-fork`;
+            // Check if fork name already exists, add number if so
+            let finalName = newName;
+            let counter = 1;
+            while (wt.branches.some((br) => br.name === finalName)) {
+              finalName = `${newName}-${counter}`;
+              counter++;
+            }
+            return {
+              ...wt,
+              branches: [
+                ...wt.branches,
+                { name: finalName, isDefault: false, isCurrent: false, lastCommit: 'just now' },
+              ],
+            };
+          }),
+        };
+      });
+    },
+    [],
+  );
+
   const handleRenameBranch = useCallback(
     (projectId: string, worktreeId: string, oldName: string, newName: string) => {
       setWorktreesOverrides((prev) => {
@@ -628,6 +660,7 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
                   onBranchNewIngestion={() => openIngestionModalEmpty()}
                   onRenameBranch={(worktreeId, oldName, newName) => handleRenameBranch(selectedProject.id, worktreeId, oldName, newName)}
                   onAddBranch={(worktreeId) => handleAddBranch(selectedProject.id, worktreeId)}
+                  onForkBranch={(worktreeId, sourceBranchName) => handleForkBranch(selectedProject.id, worktreeId, sourceBranchName)}
                   onAddWorktree={() => handleAddWorktree(selectedProject.id)}
                   onDeleteWorktree={(worktreeId) => handleDeleteWorktree(selectedProject.id, worktreeId)}
                   onBranchHover={handleBranchHover}
