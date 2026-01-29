@@ -3,7 +3,7 @@
 // Used for both viewing/editing existing skills and creating new ones
 
 import { useEffect, useCallback, useState, useMemo } from 'react';
-import { Zap, Save, Loader2, Play, RotateCcw, Code, Workflow, X, FileEdit, Star, Search } from 'lucide-react';
+import { Zap, Save, Loader2, Play, RotateCcw, Code, Workflow, X, FileEdit, Star, Search, ChevronLeft, LayoutGrid, List, ChevronDown } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSkillBuilder } from '../../hooks/useSkillBuilder';
 import { useSkills } from '../../hooks/useSkills';
@@ -18,6 +18,14 @@ import type { SkillDraft, SkillScopeSelection } from '../../types/skillDraft';
 import { defaultScopeSelection } from '../../types/skillDraft';
 
 type PreviewTab = 'code' | 'flow';
+type SkillSortBy = 'popular' | 'name' | 'recent';
+
+// Sort options for skills browse view
+const SORT_OPTIONS: { id: SkillSortBy; label: string }[] = [
+  { id: 'popular', label: 'Popular' },
+  { id: 'name', label: 'Name' },
+  { id: 'recent', label: 'Most recent' },
+];
 
 interface SkillEditorPanelProps {
   skill: Skill | null;
@@ -28,6 +36,7 @@ interface SkillEditorPanelProps {
   onCreateNew?: () => void;
   onToggleStar?: (skill: Skill, starred: boolean) => void;
   onSelectSkill?: (skill: Skill) => void;
+  onClose?: () => void;
   isCreatingNew?: boolean;
   className?: string;
 }
@@ -56,12 +65,16 @@ export function SkillEditorPanel({
   onCreateNew,
   onToggleStar,
   onSelectSkill,
+  onClose,
   isCreatingNew = false,
   className,
 }: SkillEditorPanelProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('code');
   const [hasStarred, setHasStarred] = useState(false);
   const [browseSearch, setBrowseSearch] = useState('');
+  const [browseViewMode, setBrowseViewMode] = useState<'grid' | 'list'>('grid');
+  const [browseSortBy, setBrowseSortBy] = useState<SkillSortBy>('popular');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const { skills: allSkills, loading: skillsLoading, error: skillsError, refetch: refetchSkills } = useSkills();
   const {
     state,
@@ -89,11 +102,28 @@ export function SkillEditorPanel({
       );
     }
 
-    // Sort by star count (most popular first)
-    result.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
+    // Sort based on selected sort option
+    switch (browseSortBy) {
+      case 'popular':
+        result.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
+        break;
+      case 'name':
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case 'recent':
+        result.sort((a, b) => {
+          const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+    }
 
     return result;
-  }, [allSkills, browseSearch]);
+  }, [allSkills, browseSearch, browseSortBy]);
+
+  // Current sort label
+  const currentSortLabel = SORT_OPTIONS.find((o) => o.id === browseSortBy)?.label || 'Sort';
 
   // Load skill into editor when skill changes or when entering create mode
   useEffect(() => {
@@ -206,16 +236,92 @@ export function SkillEditorPanel({
               </p>
             </div>
 
-            {/* Search */}
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={browseSearch}
-                onChange={(e) => setBrowseSearch(e.target.value)}
-                placeholder="Search skills..."
-                className="pl-9 pr-4 py-2 w-64 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-              />
+            {/* Search and View Controls */}
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative flex items-center">
+                <Search size={16} className="absolute left-3 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  value={browseSearch}
+                  onChange={(e) => setBrowseSearch(e.target.value)}
+                  placeholder="Search skills..."
+                  className="pl-9 pr-4 py-2 w-64 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+                />
+              </div>
+
+              {/* View Toggle */}
+              <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
+                <button
+                  onClick={() => setBrowseViewMode('grid')}
+                  className={cn(
+                    'p-1.5 rounded-md transition-all',
+                    browseViewMode === 'grid'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  title="Grid view"
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button
+                  onClick={() => setBrowseViewMode('list')}
+                  className={cn(
+                    'p-1.5 rounded-md transition-all',
+                    browseViewMode === 'list'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  title="List view"
+                >
+                  <List size={18} />
+                </button>
+              </div>
+
+              {/* Sort Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span>{currentSortLabel}</span>
+                  <ChevronDown
+                    size={16}
+                    className={cn(
+                      'transition-transform',
+                      isSortDropdownOpen && 'rotate-180'
+                    )}
+                  />
+                </button>
+
+                {isSortDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsSortDropdownOpen(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-xl z-50 py-1">
+                      {SORT_OPTIONS.map((option) => (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            setBrowseSortBy(option.id);
+                            setIsSortDropdownOpen(false);
+                          }}
+                          className={cn(
+                            'w-full px-4 py-2 text-sm text-left transition-colors',
+                            browseSortBy === option.id
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -231,7 +337,9 @@ export function SkillEditorPanel({
             onEditSkill={handleBrowseSkillSelect}
             onDeleteSkill={handleBrowseDelete}
             onViewSkill={handleBrowseSkillSelect}
-            viewMode="grid"
+            viewMode={browseViewMode}
+            searchQuery={browseSearch}
+            onCreateNew={onCreateNew}
           />
         </div>
       </div>
@@ -333,7 +441,7 @@ export function SkillEditorPanel({
         {/* Main Content - 3 Panel Layout */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Panel - Chat (60%) */}
-          <div className="w-[60%] h-full p-4 border-r border-border">
+          <div className="w-1/2 h-full p-4 border-r border-border">
             <SkillChat
               messages={state.messages}
               isLoading={state.isLoading}
@@ -348,7 +456,7 @@ export function SkillEditorPanel({
           </div>
 
           {/* Right Panel - Previews (40%) */}
-          <div className="w-[40%] h-full flex flex-col p-4 gap-4">
+          <div className="w-1/2 h-full flex flex-col p-4 gap-4">
             {activeTab === 'code' ? (
               <>
                 {/* YAML Preview (Top) */}
@@ -374,6 +482,14 @@ export function SkillEditorPanel({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card/50">
         <div className="flex items-center gap-3">
+          {/* Back Button */}
+          <button
+            onClick={onClose}
+            className="shrink-0 p-2 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Back to overview"
+          >
+            <ChevronLeft size={24} />
+          </button>
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <Zap size={20} className="text-primary" />
           </div>
@@ -502,7 +618,7 @@ export function SkillEditorPanel({
       {/* Main Content - 3 Panel Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Chat (60%) */}
-        <div className="w-[60%] h-full p-4 border-r border-border">
+        <div className="w-1/2 h-full p-4 border-r border-border">
           <SkillChat
             messages={state.messages}
             isLoading={state.isLoading}
@@ -518,7 +634,7 @@ export function SkillEditorPanel({
         </div>
 
         {/* Right Panel - Previews (40%) */}
-        <div className="w-[40%] h-full flex flex-col p-4 gap-4">
+        <div className="w-1/2 h-full flex flex-col p-4 gap-4">
           {activeTab === 'code' ? (
             <>
               {/* YAML Preview (Top) */}

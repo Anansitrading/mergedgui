@@ -2,7 +2,7 @@
 // Task 2_2: Skills Library UI
 // Task 2_4: Skill Detail & Edit - Added onViewSkill
 
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw, SearchX, Plus } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SkillCard } from './SkillCard';
 import type { Skill } from '../../types/skills';
@@ -19,6 +19,8 @@ interface SkillsGridProps {
   onDeleteSkill: (skill: Skill) => void;
   onViewSkill?: (skill: Skill) => void;
   viewMode?: ViewMode;
+  searchQuery?: string;
+  onCreateNew?: () => void;
 }
 
 // Skeleton card for loading state
@@ -64,6 +66,33 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
+// Empty search results state
+function EmptySearchState({ searchQuery, onCreateNew }: { searchQuery: string; onCreateNew?: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      <div className="p-4 bg-muted/50 rounded-xl border border-border mb-4">
+        <SearchX size={40} className="text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-medium text-foreground mb-2">No skills found</h3>
+      <p className="text-sm text-muted-foreground mb-1 text-center max-w-md">
+        No results for "{searchQuery}"
+      </p>
+      <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">
+        Can't find what you're looking for? Create a custom skill.
+      </p>
+      {onCreateNew && (
+        <button
+          onClick={onCreateNew}
+          className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 transition-all"
+        >
+          <Plus size={16} />
+          Create new skill
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function SkillsGrid({
   skills,
   loading,
@@ -74,6 +103,8 @@ export function SkillsGrid({
   onDeleteSkill,
   onViewSkill,
   viewMode = 'grid',
+  searchQuery,
+  onCreateNew,
 }: SkillsGridProps) {
   // Loading state
   if (loading) {
@@ -94,6 +125,11 @@ export function SkillsGrid({
   // Error state
   if (error) {
     return <ErrorState message={error} onRetry={onRetry} />;
+  }
+
+  // Empty search results state
+  if (skills.length === 0 && searchQuery) {
+    return <EmptySearchState searchQuery={searchQuery} onCreateNew={onCreateNew} />;
   }
 
   // Skills grid/list

@@ -453,8 +453,6 @@ export function IntegrationsTab() {
               setEditingConnector(undefined);
               setIsCustomConnectorModalOpen(true);
             }}
-            searchQuery={filters.search}
-            onSearchChange={(query) => setFilters({ ...filters, search: query })}
             integrations={filteredIntegrations}
             onIntegrationClick={(id) => setSelectedIntegrationId(id)}
             selectedIntegrationId={selectedIntegrationId}

@@ -21,8 +21,8 @@ export function EmptyState({ variant, onAction, searchQuery }: EmptyStateProps) 
       icon: Search,
       title: 'No integrations found',
       description: searchQuery
-        ? `No integrations match "${searchQuery}". Try a different search term.`
-        : "Try adjusting your filters to find what you're looking for.",
+        ? `No integrations match "${searchQuery}". Try a different search term or create your own via + New.`
+        : "Try adjusting your filters to find what you're looking for, or create your own via + New.",
       actionLabel: 'Clear Filters',
     },
     'no-custom': {

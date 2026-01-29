@@ -196,7 +196,7 @@ export function SkillsCategorySidebar({
   }
 
   return (
-    <aside className="w-64 shrink-0 h-full overflow-y-auto pr-4 border-r border-border">
+    <aside className="w-64 shrink-0 h-full overflow-y-auto pr-4">
       <div className="py-2">
         {/* Draft/Concept item when creating new skill */}
         {isCreatingDraft && (

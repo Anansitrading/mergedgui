@@ -6,7 +6,7 @@
 // New: Inline skill editor with chat interface
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Filter } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SkillsCategorySidebar } from '../Skills/SkillsCategorySidebar';
 import { SkillEditorPanel } from '../Skills/SkillEditorPanel';
@@ -21,17 +21,7 @@ export function SkillsTab() {
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [executeModalSkill, setExecuteModalSkill] = useState<Skill | null>(null);
-  const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Focus search input when opened
-  useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [showSearch]);
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(288); // 72 * 4 = 288px (w-72)
@@ -68,23 +58,13 @@ export function SkillsTab() {
   // Filter skills for sidebar - always show only installed (my) skills
   const filteredSkills = useMemo(() => {
     // Sidebar always shows only user's own installed skills
-    let result = skills.filter((skill) => !skill.isPublic);
-
-    // Filter by search
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
-      result = result.filter(
-        (skill) =>
-          skill.name.toLowerCase().includes(searchLower) ||
-          skill.description?.toLowerCase().includes(searchLower)
-      );
-    }
+    const result = skills.filter((skill) => !skill.isPublic);
 
     // Sort by star count (most starred first) for better discovery
     result.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
 
     return result;
-  }, [skills, search]);
+  }, [skills]);
 
   // Update selected skill when skills list changes (e.g., after edit)
   useEffect(() => {
@@ -143,6 +123,11 @@ export function SkillsTab() {
     // For now, just log - in production this would update the backend
   }, []);
 
+  const handleCloseSkill = useCallback(() => {
+    setSelectedSkill(null);
+    setIsCreatingNew(false);
+  }, []);
+
   // Render main skills view (All / My Skills)
   return (
     <div
@@ -164,7 +149,7 @@ export function SkillsTab() {
               onMouseDown={handleMouseDown}
               className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
             />
-            {/* Create, Search & Filter buttons */}
+            {/* Create & Filter buttons */}
             <div className="p-4">
               <div className="flex items-center gap-2">
                 <button
@@ -173,18 +158,6 @@ export function SkillsTab() {
                 >
                   <Plus size={18} />
                   <span>New</span>
-                </button>
-                <button
-                  onClick={() => setShowSearch(!showSearch)}
-                  className={cn(
-                    'p-2 rounded-lg border transition-colors',
-                    showSearch
-                      ? 'bg-primary/10 border-primary/30 text-primary'
-                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-                  )}
-                  title="Search skills"
-                >
-                  <Search size={18} />
                 </button>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
@@ -199,20 +172,6 @@ export function SkillsTab() {
                   <Filter size={18} />
                 </button>
               </div>
-
-              {/* Search Input (collapsible) */}
-              {showSearch && (
-                <div className="mt-3">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search skills..."
-                    className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-                  />
-                </div>
-              )}
 
               {/* Filter Panel (collapsible) */}
               {showFilters && (
@@ -257,6 +216,7 @@ export function SkillsTab() {
               onCreateNew={handleCreateSkill}
               onToggleStar={handleToggleStar}
               onSelectSkill={handleSelectSkill}
+              onClose={handleCloseSkill}
               isCreatingNew={isCreatingNew}
               className="h-full"
             />

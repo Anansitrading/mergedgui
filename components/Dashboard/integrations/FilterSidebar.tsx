@@ -2,7 +2,7 @@
 // Redesigned to match Projects sidebar style with + New, Search, and Filter buttons
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Filter, Search, X, Check, Github, Slack, Cloud, Zap, HardDrive, Network } from 'lucide-react';
+import { Plus, Filter, X, Check, Github, Slack, Cloud, Zap, HardDrive, Network } from 'lucide-react';
 import { cn } from '../../../utils/cn';
 import type { IntegrationCategory, IntegrationCardData } from '../../../types/settings';
 import { INTEGRATION_CATEGORIES } from '../../../types/settings';
@@ -94,8 +94,6 @@ interface FilterSidebarProps {
   filters: SidebarFilters;
   onFiltersChange: (filters: SidebarFilters) => void;
   onCreateNew?: () => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   integrations: IntegrationCardData[];
   onIntegrationClick?: (id: string) => void;
   selectedIntegrationId?: string | null;
@@ -129,18 +127,14 @@ export function FilterSidebar({
   filters,
   onFiltersChange,
   onCreateNew,
-  searchQuery,
-  onSearchChange,
   integrations,
   onIntegrationClick,
   selectedIntegrationId,
 }: FilterSidebarProps) {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const filterButtonRef = useRef<HTMLButtonElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -150,12 +144,6 @@ export function FilterSidebar({
     filters.selectedStatuses.length +
     filters.selectedTypes.length;
 
-  // Focus search input when opened
-  useEffect(() => {
-    if (showSearch && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [showSearch]);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -212,20 +200,6 @@ export function FilterSidebar({
             >
               <Plus size={16} />
               <span>New</span>
-            </button>
-
-            {/* Search Button */}
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className={cn(
-                'flex items-center justify-center p-2 border rounded-lg transition-colors',
-                showSearch
-                  ? 'bg-primary/10 border-primary/30 text-primary'
-                  : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-              )}
-              title="Search integrations"
-            >
-              <Search size={16} />
             </button>
 
             {/* Filter Button */}
@@ -416,19 +390,6 @@ export function FilterSidebar({
             </div>
           </div>
 
-          {/* Search Input (collapsible) */}
-          {showSearch && (
-            <div className="mt-3">
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search integrations..."
-                className="w-full px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
-              />
-            </div>
-          )}
         </div>
 
         {/* My Integrations List - Only show connected integrations */}
