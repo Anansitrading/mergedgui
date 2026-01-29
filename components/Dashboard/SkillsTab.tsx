@@ -12,18 +12,10 @@ import { SkillsCategorySidebar } from '../Skills/SkillsCategorySidebar';
 import { SkillEditorPanel } from '../Skills/SkillEditorPanel';
 import { ExecuteSkillModal } from '../Skills/ExecuteSkillModal';
 import { useSkills } from '../../hooks/useSkills';
-import { useSkillsSubNavigation, type SkillsSubTabType } from '../../hooks/useSkillsSubNavigation';
 import type { Skill } from '../../types/skills';
-
-// Sub-tab configuration
-const SUB_TABS: { id: SkillsSubTabType; label: string }[] = [
-  { id: 'all-skills', label: 'All' },
-  { id: 'my-skills', label: 'My Skills' },
-];
 
 export function SkillsTab() {
   const { skills, loading, refetch } = useSkills();
-  const { activeSubTab, setActiveSubTab } = useSkillsSubNavigation();
 
   // Selected skill and modal states
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
@@ -73,14 +65,10 @@ export function SkillsTab() {
     };
   }, []);
 
-  // Filter skills based on search and active tab
+  // Filter skills for sidebar - always show only installed (my) skills
   const filteredSkills = useMemo(() => {
-    let result = [...skills];
-
-    // Filter by tab: "my-skills" shows only user's own skills
-    if (activeSubTab === 'my-skills') {
-      result = result.filter((skill) => !skill.isPublic);
-    }
+    // Sidebar always shows only user's own installed skills
+    let result = skills.filter((skill) => !skill.isPublic);
 
     // Filter by search
     if (search.trim()) {
@@ -96,12 +84,7 @@ export function SkillsTab() {
     result.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
 
     return result;
-  }, [skills, search, activeSubTab]);
-
-  // Clear selection when switching tabs
-  useEffect(() => {
-    setSelectedSkill(null);
-  }, [activeSubTab]);
+  }, [skills, search]);
 
   // Update selected skill when skills list changes (e.g., after edit)
   useEffect(() => {
@@ -168,30 +151,6 @@ export function SkillsTab() {
       aria-labelledby="tab-skills"
       className="flex flex-col h-full"
     >
-      {/* Controls Bar */}
-      <div className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-6 py-4">
-          {/* Sub-Tab Navigation */}
-          <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
-            {SUB_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveSubTab(tab.id)}
-                className={cn(
-                  'px-4 py-1.5 text-sm font-medium rounded-md transition-all',
-                  activeSubTab === tab.id
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-        </div>
-      </div>
-
       {/* Main Content Area */}
       <main className="flex-1 overflow-hidden">
         <div className="flex h-full">
@@ -297,6 +256,7 @@ export function SkillsTab() {
               onCancelCreate={handleCancelCreate}
               onCreateNew={handleCreateSkill}
               onToggleStar={handleToggleStar}
+              onSelectSkill={handleSelectSkill}
               isCreatingNew={isCreatingNew}
               className="h-full"
             />

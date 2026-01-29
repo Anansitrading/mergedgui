@@ -10,6 +10,7 @@ import {
   Loader2,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   Shield,
   Zap,
   FolderSync,
@@ -219,6 +220,48 @@ function StepCard({
   );
 }
 
+// ─── Disconnect Confirm Popover ─────────────────────────────────
+
+function DisconnectConfirmPopover({
+  isOpen,
+  onConfirm,
+  onCancel,
+}: {
+  isOpen: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <>
+      {/* Backdrop to close on click outside */}
+      <div className="fixed inset-0 z-40" onClick={onCancel} />
+
+      {/* Popover */}
+      <div className="absolute top-full right-0 mt-2 z-50 bg-card border border-border rounded-lg shadow-xl p-4 min-w-[220px]">
+        <p className="text-sm text-foreground mb-3">
+          Are you sure you want to disconnect?
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-3 py-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-sm font-medium rounded-md transition-colors"
+          >
+            Yes
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 px-3 py-1.5 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-md border border-border transition-colors"
+          >
+            No
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Props ───────────────────────────────────────────────────────
 
 interface IntegrationDetailPanelProps {
@@ -240,6 +283,7 @@ export function IntegrationDetailPanel({
   onReconnect,
 }: IntegrationDetailPanelProps) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   if (!integration) return null;
 
@@ -262,6 +306,14 @@ export function IntegrationDetailPanel({
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between px-6 py-4 border-b border-border bg-card/30">
         <div className="flex items-center gap-4 min-w-0">
+          {/* Back Button */}
+          <button
+            onClick={onClose}
+            className="shrink-0 p-2 -ml-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            title="Back to overview"
+          >
+            <ChevronLeft size={24} />
+          </button>
           <div className="shrink-0 w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
             {integration.iconUrl ? (
               <img
@@ -273,9 +325,30 @@ export function IntegrationDetailPanel({
               getIntegrationIcon(integration.icon, 'w-6 h-6 text-muted-foreground')
             )}
           </div>
-          <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-foreground">{integration.name}</h2>
-            <span className="text-sm text-muted-foreground capitalize">{integration.category}</span>
+          <div className="min-w-0 flex items-center gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">{integration.name}</h2>
+              <span className="text-sm text-muted-foreground capitalize">{integration.category}</span>
+            </div>
+            {/* Status badges next to title */}
+            {integration.isConnected && (
+              <span
+                className={cn(
+                  'text-xs px-2.5 py-1 rounded-full font-medium',
+                  integration.connectionStatus === 'warning'
+                    ? 'bg-amber-500/20 text-amber-500'
+                    : integration.connectionStatus === 'default'
+                      ? 'bg-orange-500/20 text-orange-500'
+                      : 'bg-emerald-500/20 text-emerald-500'
+                )}
+              >
+                {integration.connectionStatus === 'warning'
+                  ? 'Needs Attention'
+                  : integration.connectionStatus === 'default'
+                    ? 'Default'
+                    : 'Connected'}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -307,12 +380,22 @@ export function IntegrationDetailPanel({
               Reconnect
             </button>
           ) : (
-            <button
-              onClick={() => onDisconnect?.(integration.id)}
-              className="flex items-center justify-center gap-2 px-5 py-2 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-lg border border-border transition-colors"
-            >
-              Disconnect
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowDisconnectConfirm(true)}
+                className="flex items-center justify-center gap-2 px-5 py-2 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-lg border border-border transition-colors"
+              >
+                Disconnect
+              </button>
+              <DisconnectConfirmPopover
+                isOpen={showDisconnectConfirm}
+                onConfirm={() => {
+                  setShowDisconnectConfirm(false);
+                  onDisconnect?.(integration.id);
+                }}
+                onCancel={() => setShowDisconnectConfirm(false)}
+              />
+            </div>
           )}
           <button
             onClick={onClose}
@@ -329,36 +412,20 @@ export function IntegrationDetailPanel({
         <div className="max-w-3xl mx-auto p-6 space-y-8">
           {/* Hero Section */}
           <div>
-            <div className="flex items-center gap-2 flex-wrap mb-3">
-              {integration.isPopular && (
-                <span className="text-sm px-3 py-1 bg-primary/20 text-primary rounded-full font-medium">
-                  Popular
-                </span>
-              )}
-              {integration.isCustom && (
-                <span className="text-sm px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full font-medium">
-                  Custom
-                </span>
-              )}
-              {integration.isConnected && (
-                <span
-                  className={cn(
-                    'text-sm px-3 py-1 rounded-full font-medium',
-                    integration.connectionStatus === 'warning'
-                      ? 'bg-amber-500/20 text-amber-500'
-                      : integration.connectionStatus === 'default'
-                        ? 'bg-orange-500/20 text-orange-500'
-                        : 'bg-emerald-500/20 text-emerald-500'
-                  )}
-                >
-                  {integration.connectionStatus === 'warning'
-                    ? 'Needs Attention'
-                    : integration.connectionStatus === 'default'
-                      ? 'Default'
-                      : 'Connected'}
-                </span>
-              )}
-            </div>
+            {(integration.isPopular || integration.isCustom) && (
+              <div className="flex items-center gap-2 flex-wrap mb-3">
+                {integration.isPopular && (
+                  <span className="text-sm px-3 py-1 bg-primary/20 text-primary rounded-full font-medium">
+                    Popular
+                  </span>
+                )}
+                {integration.isCustom && (
+                  <span className="text-sm px-3 py-1 bg-amber-500/20 text-amber-500 rounded-full font-medium">
+                    Custom
+                  </span>
+                )}
+              </div>
+            )}
 
             <p className="text-base text-muted-foreground mb-5">{content.heroSubheader}</p>
 

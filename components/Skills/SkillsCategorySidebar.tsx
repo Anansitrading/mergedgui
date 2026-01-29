@@ -218,7 +218,7 @@ export function SkillsCategorySidebar({
         {/* Skills count header */}
         <div className="px-2 py-1.5 mb-2">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Skills ({skills.length})
+            My Skills ({skills.length})
           </div>
         </div>
 

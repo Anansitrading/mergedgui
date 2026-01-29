@@ -2,9 +2,8 @@
 // Redesigned with sub-tab navigation, custom connectors, and improved filtering
 // Task 1_4: Integrations Tab Migration + Redesign
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, LayoutGrid, List, ChevronDown } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { LayoutGrid, List, ChevronDown, Search, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import {
   IntegrationCard,
@@ -15,15 +14,9 @@ import {
   IntegrationDetailPanel,
 } from './integrations';
 import type { SidebarFilters } from './integrations';
-import { WebhookList } from '../Settings/Integrations/WebhookList';
-import { WebhookForm } from '../Settings/Integrations/WebhookForm';
 import type {
   IntegrationProvider,
   ConnectedIntegration,
-  Webhook,
-  CreateWebhookData,
-  WebhookStatus,
-  IntegrationsSubTab,
   IntegrationsFilterState,
   IntegrationCardData,
   CustomConnector,
@@ -31,12 +24,7 @@ import type {
 } from '../../types/settings';
 import { INTEGRATION_APPS } from '../../types/settings';
 
-// Sub-tab configuration
-const SUB_TABS: { id: IntegrationsSubTab; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'my-integrations', label: 'My Integrations' },
-  { id: 'custom-connectors', label: 'Custom Connectors' },
-];
+// Sub-tabs removed - sidebar now handles My Integrations view
 
 // Sort options
 const SORT_OPTIONS: { id: IntegrationsFilterState['sortBy']; label: string }[] = [
@@ -55,20 +43,6 @@ const DEFAULT_FILTERS: IntegrationsFilterState = {
 };
 
 export function IntegrationsTab() {
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  // Active sub-tab from URL
-  const activeTab = (searchParams.get('subtab') as IntegrationsSubTab) || 'all';
-  const setActiveTab = useCallback(
-    (tab: IntegrationsSubTab) => {
-      setSearchParams((prev) => {
-        prev.set('subtab', tab);
-        return prev;
-      });
-    },
-    [setSearchParams]
-  );
-
   // Filter state
   const [filters, setFilters] = useState<IntegrationsFilterState>(DEFAULT_FILTERS);
 
@@ -136,37 +110,15 @@ export function IntegrationsTab() {
     },
   ]);
 
-  // Webhooks state (mock data)
-  const [webhooks, setWebhooks] = useState<Webhook[]>([
-    {
-      id: '1',
-      name: 'Lead Notifications',
-      endpointUrl: 'https://example.com/webhooks/leads',
-      secret: 'whsec_xxxxxxxxxxxxx',
-      events: ['lead.created', 'lead.updated'],
-      status: 'active',
-      createdAt: new Date('2024-01-05'),
-      lastTriggeredAt: new Date('2024-01-19'),
-    },
-  ]);
-
   // Sidebar filter state
   const [sidebarFilters, setSidebarFilters] = useState<SidebarFilters>(DEFAULT_SIDEBAR_FILTERS);
 
   // Modal states
   const [isCustomConnectorModalOpen, setIsCustomConnectorModalOpen] = useState(false);
   const [editingConnector, setEditingConnector] = useState<CustomConnector | undefined>();
-  const [isWebhookFormOpen, setIsWebhookFormOpen] = useState(false);
-  const [editingWebhook, setEditingWebhook] = useState<Webhook | undefined>();
 
   // Selected integration for detail panel
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | null>(null);
-
-  // Reset filters when changing tabs
-  useEffect(() => {
-    setFilters(DEFAULT_FILTERS);
-    setSidebarFilters(DEFAULT_SIDEBAR_FILTERS);
-  }, [activeTab]);
 
   // Transform pre-built apps to unified card data
   const transformAppToCardData = useCallback(
@@ -219,28 +171,11 @@ export function IntegrationsTab() {
 
   // Filter and sort integrations
   const filteredIntegrations = useMemo(() => {
-    let items: IntegrationCardData[] = [];
-
-    // Get items based on active tab
-    if (activeTab === 'all') {
-      items = [
-        ...INTEGRATION_APPS.map(transformAppToCardData),
-        ...customConnectors.map(transformConnectorToCardData),
-      ];
-    } else if (activeTab === 'my-integrations') {
-      // Only show connected integrations
-      const connectedAppIds = connectedApps.map((c) => c.provider);
-      items = [
-        ...INTEGRATION_APPS.filter((app) => connectedAppIds.includes(app.id)).map(
-          transformAppToCardData
-        ),
-        ...customConnectors
-          .filter((c) => c.status === 'active')
-          .map(transformConnectorToCardData),
-      ];
-    } else if (activeTab === 'custom-connectors') {
-      items = customConnectors.map(transformConnectorToCardData);
-    }
+    // Show all integrations (pre-built + custom connectors)
+    let items: IntegrationCardData[] = [
+      ...INTEGRATION_APPS.map(transformAppToCardData),
+      ...customConnectors.map(transformConnectorToCardData),
+    ];
 
     // Apply filters
     if (filters.search) {
@@ -258,15 +193,6 @@ export function IntegrationsTab() {
 
     if (filters.showConnectedOnly) {
       items = items.filter((item) => item.isConnected);
-    }
-
-    if (activeTab === 'my-integrations' && filters.statusFilter !== 'all') {
-      items = items.filter((item) => {
-        if (filters.statusFilter === 'connected') {
-          return item.connectionStatus === 'connected';
-        }
-        return item.connectionStatus === 'warning' || item.connectionStatus === 'disconnected';
-      });
     }
 
     // Apply sidebar filters
@@ -317,7 +243,6 @@ export function IntegrationsTab() {
       }
     });
   }, [
-    activeTab,
     filters,
     sidebarFilters,
     connectedApps,
@@ -349,9 +274,7 @@ export function IntegrationsTab() {
   };
 
   const handleDisconnect = async (id: string) => {
-    if (window.confirm('Are you sure you want to disconnect this integration?')) {
-      setConnectedApps((prev) => prev.filter((c) => c.provider !== id));
-    }
+    setConnectedApps((prev) => prev.filter((c) => c.provider !== id));
   };
 
   const handleManage = (id: string) => {
@@ -402,54 +325,8 @@ export function IntegrationsTab() {
     }
   };
 
-  // Handlers for webhooks
-  const handleCreateWebhook = async (data: CreateWebhookData) => {
-    const newWebhook: Webhook = {
-      id: Date.now().toString(),
-      ...data,
-      status: 'active',
-      createdAt: new Date(),
-    };
-    setWebhooks((prev) => [...prev, newWebhook]);
-  };
-
-  const handleEditWebhook = (webhook: Webhook) => {
-    setEditingWebhook(webhook);
-    setIsWebhookFormOpen(true);
-  };
-
-  const handleUpdateWebhook = async (data: CreateWebhookData) => {
-    if (!editingWebhook) return;
-    setWebhooks((prev) =>
-      prev.map((w) => (w.id === editingWebhook.id ? { ...w, ...data } : w))
-    );
-    setEditingWebhook(undefined);
-  };
-
-  const handleDeleteWebhook = async (webhookId: string) => {
-    if (window.confirm('Are you sure you want to delete this webhook?')) {
-      setWebhooks((prev) => prev.filter((w) => w.id !== webhookId));
-    }
-  };
-
-  const handleToggleWebhookStatus = async (webhookId: string, status: WebhookStatus) => {
-    setWebhooks((prev) => prev.map((w) => (w.id === webhookId ? { ...w, status } : w)));
-  };
-
-  const handleTestWebhook = async (webhookId: string) => {
-    console.log('Testing webhook:', webhookId);
-    alert('Test payload sent! Check your endpoint for the delivery.');
-  };
-
-  const handleViewWebhookLogs = (webhookId: string) => {
-    console.log('Viewing logs for webhook:', webhookId);
-  };
-
   // Determine if we should show empty states
-  const showEmptyState =
-    filteredIntegrations.length === 0 &&
-    !filters.search &&
-    (activeTab === 'my-integrations' || activeTab === 'custom-connectors');
+  const showEmptyState = filteredIntegrations.length === 0 && !filters.search;
 
   return (
     <div
@@ -461,26 +338,31 @@ export function IntegrationsTab() {
       {/* Controls Bar - with border like Projects */}
       <div className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
         <div className="flex items-center justify-between px-6 py-4">
-          {/* Sub-Tab Navigation - Pill style */}
-          <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg">
-            {SUB_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'px-4 py-1.5 text-sm font-medium rounded-md transition-all',
-                  activeTab === tab.id
-                    ? 'bg-card text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          {/* Title */}
+          <h1 className="text-lg font-semibold text-foreground">All Integrations</h1>
 
-          {/* View Controls */}
+          {/* Search and View Controls */}
           <div className="flex items-center gap-3">
+            {/* Search Input */}
+            <div className="relative flex items-center">
+              <Search size={16} className="absolute left-3 text-muted-foreground pointer-events-none" />
+              <input
+                type="text"
+                value={filters.search}
+                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                placeholder="Search integrations..."
+                className="w-64 pl-9 pr-8 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              />
+              {filters.search && (
+                <button
+                  onClick={() => setFilters({ ...filters, search: '' })}
+                  className="absolute right-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
             {/* View Toggle */}
             <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
               <button
@@ -595,17 +477,11 @@ export function IntegrationsTab() {
           ) : (
             /* Cards Grid */
             <div className="flex-1 min-w-0">
-              {/* Content based on active tab */}
+              {/* Content */}
               {showEmptyState ? (
                 <EmptyState
-                  variant={activeTab === 'my-integrations' ? 'no-integrations' : 'no-custom'}
-                  onAction={() => {
-                    if (activeTab === 'my-integrations') {
-                      setActiveTab('all');
-                    } else {
-                      setIsCustomConnectorModalOpen(true);
-                    }
-                  }}
+                  variant="no-integrations"
+                  onAction={() => setIsCustomConnectorModalOpen(true)}
                 />
               ) : filteredIntegrations.length === 0 && filters.search ? (
                 <EmptyState
@@ -641,40 +517,6 @@ export function IntegrationsTab() {
                 </div>
               )}
 
-              {/* Webhooks Section (only in My Integrations tab) */}
-              {activeTab === 'my-integrations' && (
-                <>
-                  <div className="border-t border-border pt-8 mt-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h2 className="text-lg font-semibold text-foreground">Webhooks</h2>
-                        <p className="text-sm text-muted-foreground">
-                          Receive real-time notifications when events occur in your account.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setEditingWebhook(undefined);
-                          setIsWebhookFormOpen(true);
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 bg-secondary hover:bg-muted text-secondary-foreground text-sm font-medium rounded-lg border border-border transition-colors"
-                      >
-                        <Plus size={16} />
-                        Add Webhook
-                      </button>
-                    </div>
-
-                    <WebhookList
-                      webhooks={webhooks}
-                      onEdit={handleEditWebhook}
-                      onDelete={handleDeleteWebhook}
-                      onToggleStatus={handleToggleWebhookStatus}
-                      onTest={handleTestWebhook}
-                      onViewLogs={handleViewWebhookLogs}
-                    />
-                  </div>
-                </>
-              )}
             </div>
           )}
         </div>
@@ -689,17 +531,6 @@ export function IntegrationsTab() {
           setEditingConnector(undefined);
         }}
         onSubmit={editingConnector ? handleUpdateCustomConnector : handleCreateCustomConnector}
-      />
-
-      {/* Webhook Form Modal */}
-      <WebhookForm
-        isOpen={isWebhookFormOpen}
-        webhook={editingWebhook}
-        onClose={() => {
-          setIsWebhookFormOpen(false);
-          setEditingWebhook(undefined);
-        }}
-        onSubmit={editingWebhook ? handleUpdateWebhook : handleCreateWebhook}
       />
     </div>
   );

@@ -2,15 +2,17 @@
 // Inline skill editor with 3-panel layout (Chat | YAML + Markdown)
 // Used for both viewing/editing existing skills and creating new ones
 
-import { useEffect, useCallback, useState } from 'react';
-import { Zap, Save, Loader2, Play, RotateCcw, Code, Workflow, X, FileEdit, Users, Sparkles, Star, Download } from 'lucide-react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
+import { Zap, Save, Loader2, Play, RotateCcw, Code, Workflow, X, FileEdit, Star, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useSkillBuilder } from '../../hooks/useSkillBuilder';
+import { useSkills } from '../../hooks/useSkills';
 import { SkillChat } from './ConversationalSkillBuilder/SkillChat';
 import { YamlPreview } from './ConversationalSkillBuilder/YamlPreview';
 import { MarkdownPreview } from './ConversationalSkillBuilder/MarkdownPreview';
 import { SkillFlowDiagram } from './ConversationalSkillBuilder/SkillFlowDiagram';
 import { ScopeSelectorDropdown } from './ScopeSelectorDropdown';
+import { SkillsGrid } from './SkillsGrid';
 import type { Skill } from '../../types/skills';
 import type { SkillDraft, SkillScopeSelection } from '../../types/skillDraft';
 import { defaultScopeSelection } from '../../types/skillDraft';
@@ -25,6 +27,7 @@ interface SkillEditorPanelProps {
   onCancelCreate?: () => void;
   onCreateNew?: () => void;
   onToggleStar?: (skill: Skill, starred: boolean) => void;
+  onSelectSkill?: (skill: Skill) => void;
   isCreatingNew?: boolean;
   className?: string;
 }
@@ -52,11 +55,14 @@ export function SkillEditorPanel({
   onCancelCreate,
   onCreateNew,
   onToggleStar,
+  onSelectSkill,
   isCreatingNew = false,
   className,
 }: SkillEditorPanelProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>('code');
   const [hasStarred, setHasStarred] = useState(false);
+  const [browseSearch, setBrowseSearch] = useState('');
+  const { skills: allSkills, loading: skillsLoading, error: skillsError, refetch: refetchSkills } = useSkills();
   const {
     state,
     sendMessage,
@@ -68,6 +74,26 @@ export function SkillEditorPanel({
     loadSkill,
     canCreateSkill,
   } = useSkillBuilder();
+
+  // Filter and sort skills for browse view
+  const filteredBrowseSkills = useMemo(() => {
+    let result = [...allSkills];
+
+    // Filter by search
+    if (browseSearch.trim()) {
+      const searchLower = browseSearch.toLowerCase();
+      result = result.filter(
+        (s) =>
+          s.name.toLowerCase().includes(searchLower) ||
+          s.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Sort by star count (most popular first)
+    result.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
+
+    return result;
+  }, [allSkills, browseSearch]);
 
   // Load skill into editor when skill changes or when entering create mode
   useEffect(() => {
@@ -153,84 +179,60 @@ export function SkillEditorPanel({
     }
   }, [skill, loadSkill]);
 
-  // Show empty state when no skill selected and not creating
+  // Handle skill selection from browse grid
+  const handleBrowseSkillSelect = useCallback((skillToSelect: Skill) => {
+    onSelectSkill?.(skillToSelect);
+  }, [onSelectSkill]);
+
+  // Handle delete (no-op for browse, user should select first)
+  const handleBrowseDelete = useCallback(() => {
+    // No-op in browse view
+  }, []);
+
+  // Show skills browser when no skill selected and not creating
   if (!skill && !isCreatingNew) {
     return (
-      <div className={cn('flex items-center justify-center h-full', className)}>
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          {/* Icon */}
-          <div className="relative mb-6">
-            <div className="p-6 bg-primary/10 rounded-2xl border border-primary/20">
-              <Users size={48} className="text-primary" />
-            </div>
-            <div className="absolute -top-2 -right-2 p-2 bg-card border border-border rounded-full shadow-lg">
-              <Sparkles size={16} className="text-yellow-500" />
-            </div>
-          </div>
-
-          {/* Title */}
-          <h2 className="text-2xl font-bold text-foreground mb-3">
-            Community Skills
-          </h2>
-
-          {/* Description */}
-          <p className="text-center text-muted-foreground max-w-md mb-8">
-            Discover and share skills created by the Kijko community.
-            Rate, review, and use skills built by other users.
-          </p>
-
-          {/* Coming Soon Badge */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full text-primary text-sm font-medium mb-8">
-            <Sparkles size={16} />
-            Coming Soon
-          </div>
-
-          {/* Feature Preview */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl">
-            <div className="bg-card border border-border rounded-xl p-4 text-center">
-              <div className="p-2 bg-yellow-500/10 rounded-lg w-fit mx-auto mb-3">
-                <Star size={20} className="text-yellow-500" />
-              </div>
-              <h3 className="font-medium text-foreground mb-1">Rate & Review</h3>
-              <p className="text-xs text-muted-foreground">
-                Share your experience with skills from the community
+      <div className={cn('flex flex-col h-full', className)}>
+        {/* Header */}
+        <div className="shrink-0 px-6 py-4 border-b border-border bg-card/30">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                All Skills
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {filteredBrowseSkills.length} {filteredBrowseSkills.length === 1 ? 'skill' : 'skills'} available
+                {browseSearch && ` matching "${browseSearch}"`}
               </p>
             </div>
 
-            <div className="bg-card border border-border rounded-xl p-4 text-center">
-              <div className="p-2 bg-green-500/10 rounded-lg w-fit mx-auto mb-3">
-                <Download size={20} className="text-green-500" />
-              </div>
-              <h3 className="font-medium text-foreground mb-1">Easy Import</h3>
-              <p className="text-xs text-muted-foreground">
-                Add community skills to your library with one click
-              </p>
-            </div>
-
-            <div className="bg-card border border-border rounded-xl p-4 text-center">
-              <div className="p-2 bg-blue-500/10 rounded-lg w-fit mx-auto mb-3">
-                <Users size={20} className="text-blue-500" />
-              </div>
-              <h3 className="font-medium text-foreground mb-1">Share Your Skills</h3>
-              <p className="text-xs text-muted-foreground">
-                Publish your custom skills for others to use
-              </p>
+            {/* Search */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={browseSearch}
+                onChange={(e) => setBrowseSearch(e.target.value)}
+                placeholder="Search skills..."
+                className="pl-9 pr-4 py-2 w-64 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
+              />
             </div>
           </div>
+        </div>
 
-          {/* CTA */}
-          <div className="mt-8">
-            <p className="text-sm text-muted-foreground mb-4">
-              In the meantime, create your own custom skills:
-            </p>
-            <button
-              onClick={onCreateNew}
-              className="flex items-center gap-2 px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-            >
-              <Sparkles size={18} />
-              Create Custom Skill
-            </button>
-          </div>
+        {/* Skills Grid */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <SkillsGrid
+            skills={filteredBrowseSkills}
+            loading={skillsLoading}
+            error={skillsError}
+            onRetry={refetchSkills}
+            onRunSkill={onRun || (() => {})}
+            onEditSkill={handleBrowseSkillSelect}
+            onDeleteSkill={handleBrowseDelete}
+            onViewSkill={handleBrowseSkillSelect}
+            viewMode="grid"
+          />
         </div>
       </div>
     );
