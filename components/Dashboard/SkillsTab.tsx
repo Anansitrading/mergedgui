@@ -16,6 +16,24 @@ import type { Skill, SkillCategory } from '../../types/skills';
 
 type SkillSortBy = 'popular' | 'name' | 'recent' | 'newest';
 
+const CATEGORY_LABELS: Record<SkillCategory, string> = {
+  analysis: 'Analysis',
+  generation: 'Generation',
+  transformation: 'Transformation',
+  communication: 'Communication',
+  automation: 'Automation',
+  custom: 'Custom',
+};
+
+const CATEGORY_ORDER: SkillCategory[] = [
+  'analysis',
+  'generation',
+  'transformation',
+  'communication',
+  'automation',
+  'custom',
+];
+
 // Sort options for skills browse view
 const SORT_OPTIONS: { id: SkillSortBy; label: string }[] = [
   { id: 'popular', label: 'Popular' },
@@ -37,9 +55,16 @@ export function SkillsTab() {
   const [browseViewMode, setBrowseViewMode] = useState<'grid' | 'list'>('grid');
   const [browseSortBy, setBrowseSortBy] = useState<SkillSortBy>('popular');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [sortDropdownPosition, setSortDropdownPosition] = useState({ top: 0, left: 0 });
+  const sortButtonRef = useRef<HTMLButtonElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   // Category filter state - shared between sidebar and main panel
   const [selectedCategories, setSelectedCategories] = useState<SkillCategory[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterDropdownPosition, setFilterDropdownPosition] = useState({ top: 0, left: 0 });
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(288); // 72 * 4 = 288px (w-72)
@@ -72,6 +97,68 @@ export function SkillsTab() {
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
+
+  // Sort dropdown handlers
+  const openSort = useCallback(() => {
+    if (sortButtonRef.current) {
+      const rect = sortButtonRef.current.getBoundingClientRect();
+      setSortDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.right - 192, // 192px = w-48 dropdown width
+      });
+    }
+    setIsSortDropdownOpen(true);
+  }, []);
+
+  // Filter dropdown handlers
+  const openFilter = useCallback(() => {
+    if (filterButtonRef.current) {
+      const rect = filterButtonRef.current.getBoundingClientRect();
+      setFilterDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.right - 224, // 224px = w-56 dropdown width
+      });
+    }
+    setIsFilterOpen(true);
+  }, []);
+
+  const toggleCategory = useCallback((category: SkillCategory) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category]
+    );
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setSelectedCategories([]);
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      // Close filter dropdown
+      if (
+        filterButtonRef.current && !filterButtonRef.current.contains(target) &&
+        filterDropdownRef.current && !filterDropdownRef.current.contains(target)
+      ) {
+        setIsFilterOpen(false);
+      }
+      // Close sort dropdown
+      if (
+        sortButtonRef.current && !sortButtonRef.current.contains(target) &&
+        sortDropdownRef.current && !sortDropdownRef.current.contains(target)
+      ) {
+        setIsSortDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const hasActiveFilters = selectedCategories.length > 0;
 
   // Filter skills for sidebar - always show only installed (my) skills
   const filteredSkills = useMemo(() => {
@@ -189,6 +276,70 @@ export function SkillsTab() {
                 )}
               </div>
 
+              {/* Filter Button */}
+              <div className="relative">
+                <button
+                  ref={filterButtonRef}
+                  onClick={() => isFilterOpen ? setIsFilterOpen(false) : openFilter()}
+                  className={cn(
+                    'flex items-center justify-center p-2 border rounded-lg transition-colors',
+                    hasActiveFilters
+                      ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                  title="Filter by category"
+                >
+                  <Filter size={18} />
+                  {hasActiveFilters && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                      {selectedCategories.length}
+                    </span>
+                  )}
+                </button>
+
+                {/* Filter Dropdown - rendered via portal */}
+                {isFilterOpen && createPortal(
+                  <div
+                    ref={filterDropdownRef}
+                    className="fixed w-56 bg-card border border-border rounded-lg shadow-xl z-[100] py-2"
+                    style={{ top: filterDropdownPosition.top, left: filterDropdownPosition.left }}
+                  >
+                    <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">Filter by Category</span>
+                      {hasActiveFilters && (
+                        <button
+                          onClick={clearFilters}
+                          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                        >
+                          <X size={12} />
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <div className="py-1">
+                      {CATEGORY_ORDER.map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => toggleCategory(category)}
+                          className={cn(
+                            'w-full px-3 py-2 text-sm text-left flex items-center justify-between transition-colors',
+                            selectedCategories.includes(category)
+                              ? 'bg-primary/10 text-primary'
+                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                          )}
+                        >
+                          <span>{CATEGORY_LABELS[category]}</span>
+                          {selectedCategories.includes(category) && (
+                            <Check size={14} className="text-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>,
+                  document.body
+                )}
+              </div>
+
               {/* View Toggle */}
               <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
                 <button
@@ -220,7 +371,8 @@ export function SkillsTab() {
               {/* Sort Dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
+                  ref={sortButtonRef}
+                  onClick={() => isSortDropdownOpen ? setIsSortDropdownOpen(false) : openSort()}
                   className="flex items-center gap-2 px-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <span>{currentSortLabel}</span>
@@ -233,32 +385,32 @@ export function SkillsTab() {
                   />
                 </button>
 
-                {isSortDropdownOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setIsSortDropdownOpen(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-lg shadow-xl z-50 py-1">
-                      {SORT_OPTIONS.map((option) => (
-                        <button
-                          key={option.id}
-                          onClick={() => {
-                            setBrowseSortBy(option.id);
-                            setIsSortDropdownOpen(false);
-                          }}
-                          className={cn(
-                            'w-full px-4 py-2 text-sm text-left transition-colors',
-                            browseSortBy === option.id
-                              ? 'bg-primary/10 text-primary'
-                              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                          )}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </>
+                {/* Sort Dropdown - rendered via portal */}
+                {isSortDropdownOpen && createPortal(
+                  <div
+                    ref={sortDropdownRef}
+                    className="fixed w-48 bg-card border border-border rounded-lg shadow-xl z-[100] py-1"
+                    style={{ top: sortDropdownPosition.top, left: sortDropdownPosition.left }}
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          setBrowseSortBy(option.id);
+                          setIsSortDropdownOpen(false);
+                        }}
+                        className={cn(
+                          'w-full px-4 py-2 text-sm text-left transition-colors',
+                          browseSortBy === option.id
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>,
+                  document.body
                 )}
               </div>
             </div>
@@ -292,7 +444,6 @@ export function SkillsTab() {
                 onSelectDraft={() => setIsCreatingNew(true)}
                 onCreateNew={handleCreateSkill}
                 selectedCategories={selectedCategories}
-                onSelectedCategoriesChange={setSelectedCategories}
               />
             </div>
           </div>

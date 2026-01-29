@@ -2,8 +2,8 @@
 // Redesigned with sub-tab navigation, custom connectors, and improved filtering
 // Task 1_4: Integrations Tab Migration + Redesign
 
-import { useState, useMemo, useCallback } from 'react';
-import { LayoutGrid, List, ChevronDown, Search, X } from 'lucide-react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { LayoutGrid, List, ChevronDown, Search, X, Filter, Check } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import {
   IntegrationCard,
@@ -22,7 +22,8 @@ import type {
   CustomConnector,
   CreateCustomConnectorData,
 } from '../../types/settings';
-import { INTEGRATION_APPS } from '../../types/settings';
+import { INTEGRATION_APPS, INTEGRATION_CATEGORIES } from '../../types/settings';
+import type { IntegrationCategory } from '../../types/settings';
 
 // Sub-tabs removed - sidebar now handles My Integrations view
 
@@ -41,6 +42,30 @@ const DEFAULT_FILTERS: IntegrationsFilterState = {
   sortBy: 'popular',
   showConnectedOnly: false,
 };
+
+// Filter options for dropdown
+const STATUS_OPTIONS: { value: SidebarFilters['selectedStatuses'][number]; label: string }[] = [
+  { value: 'default', label: 'Default' },
+  { value: 'connected', label: 'Connected' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'disconnected', label: 'Disconnected' },
+];
+
+const TYPE_OPTIONS: { value: SidebarFilters['selectedTypes'][number]; label: string }[] = [
+  { value: 'pre-built', label: 'Pre-built' },
+  { value: 'custom', label: 'Custom' },
+];
+
+const CATEGORY_OPTIONS: { value: IntegrationCategory; label: string }[] = Object.entries(
+  INTEGRATION_CATEGORIES
+).map(([value, label]) => ({
+  value: value as IntegrationCategory,
+  label: label as string,
+}));
+
+function toggleItem<T>(arr: T[], item: T): T[] {
+  return arr.includes(item) ? arr.filter((i) => i !== item) : [...arr, item];
+}
 
 export function IntegrationsTab() {
   // Filter state
@@ -112,6 +137,43 @@ export function IntegrationsTab() {
 
   // Sidebar filter state
   const [sidebarFilters, setSidebarFilters] = useState<SidebarFilters>(DEFAULT_SIDEBAR_FILTERS);
+
+  // Filter dropdown state
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [filterDropdownPosition, setFilterDropdownPosition] = useState({ top: 0, left: 0 });
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+
+  const activeFilterCount =
+    sidebarFilters.selectedCategories.length +
+    sidebarFilters.selectedStatuses.length +
+    sidebarFilters.selectedTypes.length;
+
+  const openFilterDropdown = useCallback(() => {
+    if (filterButtonRef.current) {
+      const rect = filterButtonRef.current.getBoundingClientRect();
+      setFilterDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.right - 220,
+      });
+    }
+    setIsFilterDropdownOpen(true);
+  }, []);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (filterButtonRef.current && !filterButtonRef.current.contains(target)) {
+        const dropdown = document.getElementById('integrations-filter-dropdown');
+        if (dropdown && !dropdown.contains(target)) {
+          setIsFilterDropdownOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Modal states
   const [isCustomConnectorModalOpen, setIsCustomConnectorModalOpen] = useState(false);
@@ -360,6 +422,168 @@ export function IntegrationsTab() {
                 >
                   <X size={14} />
                 </button>
+              )}
+            </div>
+
+            {/* Filter Button */}
+            <div className="relative">
+              <button
+                ref={filterButtonRef}
+                onClick={() => isFilterDropdownOpen ? setIsFilterDropdownOpen(false) : openFilterDropdown()}
+                className={cn(
+                  'flex items-center justify-center p-2 border rounded-lg transition-colors',
+                  activeFilterCount > 0
+                    ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
+                    : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                )}
+                title="Filter integrations"
+              >
+                <Filter size={18} />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Filter Dropdown */}
+              {isFilterDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsFilterDropdownOpen(false)}
+                  />
+                  <div
+                    id="integrations-filter-dropdown"
+                    className="fixed min-w-[220px] bg-card border border-border rounded-lg shadow-xl z-50 py-3 max-h-[70vh] overflow-y-auto"
+                    style={{ top: filterDropdownPosition.top, left: filterDropdownPosition.left }}
+                  >
+                    {/* Header with clear button */}
+                    <div className="flex items-center justify-between px-4 pb-3 border-b border-border mb-3">
+                      <span className="text-sm font-medium text-foreground">Filters</span>
+                      {activeFilterCount > 0 && (
+                        <button
+                          onClick={() => setSidebarFilters(DEFAULT_SIDEBAR_FILTERS)}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X size={12} />
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Status Filters */}
+                    <div className="px-4 mb-4">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                        Status
+                      </span>
+                      <div className="flex flex-col gap-1">
+                        {STATUS_OPTIONS.map((option) => {
+                          const isActive = sidebarFilters.selectedStatuses.includes(option.value);
+                          return (
+                            <button
+                              key={option.value}
+                              onClick={() =>
+                                setSidebarFilters({
+                                  ...sidebarFilters,
+                                  selectedStatuses: toggleItem(sidebarFilters.selectedStatuses, option.value),
+                                })
+                              }
+                              className={cn(
+                                'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                  isActive ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                                )}
+                              >
+                                {isActive && <Check size={12} className="text-primary-foreground" />}
+                              </span>
+                              <span>{option.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Type Filters */}
+                    <div className="px-4 mb-4">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                        Type
+                      </span>
+                      <div className="flex flex-col gap-1">
+                        {TYPE_OPTIONS.map((option) => {
+                          const isActive = sidebarFilters.selectedTypes.includes(option.value);
+                          return (
+                            <button
+                              key={option.value}
+                              onClick={() =>
+                                setSidebarFilters({
+                                  ...sidebarFilters,
+                                  selectedTypes: toggleItem(sidebarFilters.selectedTypes, option.value),
+                                })
+                              }
+                              className={cn(
+                                'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                  isActive ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                                )}
+                              >
+                                {isActive && <Check size={12} className="text-primary-foreground" />}
+                              </span>
+                              <span>{option.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Category Filters */}
+                    <div className="px-4">
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                        Categories
+                      </span>
+                      <div className="flex flex-col gap-1">
+                        {CATEGORY_OPTIONS.map((option) => {
+                          const isActive = sidebarFilters.selectedCategories.includes(option.value);
+                          return (
+                            <button
+                              key={option.value}
+                              onClick={() =>
+                                setSidebarFilters({
+                                  ...sidebarFilters,
+                                  selectedCategories: toggleItem(sidebarFilters.selectedCategories, option.value),
+                                })
+                              }
+                              className={cn(
+                                'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                  isActive ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                                )}
+                              >
+                                {isActive && <Check size={12} className="text-primary-foreground" />}
+                              </span>
+                              <span>{option.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 

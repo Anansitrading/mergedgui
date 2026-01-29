@@ -87,37 +87,12 @@ function saveSelectionToStorage(selectedIds: string[]): void {
   }
 }
 
-// Mock source files data
-const MOCK_SOURCE_FILES: SourceFile[] = [
-  { id: '1', name: 'App.tsx', extension: 'tsx', size: 12400, type: 'typescript' },
-  { id: '2', name: 'index.ts', extension: 'ts', size: 2100, type: 'typescript' },
-  { id: '3', name: 'types.ts', extension: 'ts', size: 8500, type: 'typescript' },
-  { id: '4', name: 'Sidebar.tsx', extension: 'tsx', size: 5600, type: 'typescript' },
-  { id: '5', name: 'HypervisaView.tsx', extension: 'tsx', size: 15200, type: 'typescript' },
-  { id: '6', name: 'package.json', extension: 'json', size: 3200, type: 'json' },
-  { id: '7', name: 'README.md', extension: 'md', size: 4800, type: 'markdown' },
-  { id: '8', name: 'index.css', extension: 'css', size: 6700, type: 'css' },
-  { id: '9', name: 'vite.config.ts', extension: 'ts', size: 1800, type: 'typescript' },
-  { id: '10', name: 'tailwind.config.js', extension: 'js', size: 2400, type: 'javascript' },
-  { id: '11', name: 'ContextInspector.tsx', extension: 'tsx', size: 18900, type: 'typescript' },
-  { id: '12', name: 'ChatHistoryPanel.tsx', extension: 'tsx', size: 9300, type: 'typescript' },
-  { id: '13', name: 'SettingsContext.tsx', extension: 'tsx', size: 7800, type: 'typescript' },
-  { id: '14', name: 'useTheme.ts', extension: 'ts', size: 1200, type: 'typescript' },
-  { id: '15', name: 'cn.ts', extension: 'ts', size: 400, type: 'typescript' },
-  { id: '16', name: 'ProjectsContext.tsx', extension: 'tsx', size: 11200, type: 'typescript' },
-  { id: '17', name: 'NotificationContext.tsx', extension: 'tsx', size: 5400, type: 'typescript' },
-  { id: '18', name: 'main.py', extension: 'py', size: 3600, type: 'python' },
-  { id: '19', name: 'index.html', extension: 'html', size: 1100, type: 'html' },
-  { id: '20', name: 'api-spec.json', extension: 'json', size: 45600, type: 'json' },
-  { id: '21', name: 'EmptyState.tsx', extension: 'tsx', size: 2200, type: 'typescript' },
-  { id: '22', name: 'StatusBadge.tsx', extension: 'tsx', size: 1800, type: 'typescript' },
-  { id: '23', name: 'ProgressBar.tsx', extension: 'tsx', size: 1400, type: 'typescript' },
-  { id: '24', name: 'tsconfig.json', extension: 'json', size: 800, type: 'json' },
-];
+// Empty initial state - files are added via ingestion
+const INITIAL_SOURCE_FILES: SourceFile[] = [];
 
 // Initial state
 const initialState: SourceFilesState = {
-  files: MOCK_SOURCE_FILES,
+  files: INITIAL_SOURCE_FILES,
   selectedFileIds: new Set<string>(),
   isLoading: false,
 };

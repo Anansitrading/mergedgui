@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
@@ -6,6 +7,9 @@ import {
   ChevronDown,
   FolderOpen,
   Search,
+  Filter,
+  X,
+  Check,
 } from 'lucide-react';
 import { UserAvatar } from '../Dashboard/UserAvatar';
 import { useProjects } from '../../contexts/ProjectsContext';
@@ -72,6 +76,10 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
   const [sidebarFilters, setSidebarFilters] = useState<ProjectSidebarFilters>(DEFAULT_PROJECT_SIDEBAR_FILTERS);
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [filterDropdownPosition, setFilterDropdownPosition] = useState({ top: 0, left: 0 });
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
   const [userManagementProject, setUserManagementProject] = useState<Project | null>(null);
   const [hoveredBranch, setHoveredBranch] = useState<{ worktreeId: string; branchName: string } | null>(null);
 
@@ -82,6 +90,33 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
   );
 
   const activeFilterCount = (filter !== 'all' ? 1 : 0) + (sidebarFilters.quickFilter ? 1 : 0) + sidebarFilters.selectedTags.length;
+
+  const openFilterDropdown = useCallback(() => {
+    if (filterButtonRef.current) {
+      const rect = filterButtonRef.current.getBoundingClientRect();
+      setFilterDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.right - 220,
+      });
+    }
+    setIsFilterDropdownOpen(true);
+  }, []);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        filterButtonRef.current && !filterButtonRef.current.contains(target) &&
+        filterDropdownRef.current && !filterDropdownRef.current.contains(target)
+      ) {
+        setIsFilterDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Filter projects based on sidebar filters (tags and status)
   // When no filter is set, show all projects
@@ -208,6 +243,37 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
     [],
   );
 
+  const handleAddWorktree = useCallback(
+    (projectId: string) => {
+      setWorktreesOverrides((prev) => {
+        const current = prev[projectId] ?? getWorktreesForProject(projectId);
+        const newWorktree: WorktreeWithBranches = {
+          id: `worktree-${Date.now()}`,
+          name: `Worktree-${current.length + 1}`,
+          path: `/Worktree-${current.length + 1}`,
+          isActive: false,
+          currentBranch: 'main',
+          branches: [{ name: 'main', isDefault: true, isCurrent: true, lastCommit: 'just now' }],
+        };
+        return { ...prev, [projectId]: [...current, newWorktree] };
+      });
+    },
+    [],
+  );
+
+  const handleDeleteWorktree = useCallback(
+    (projectId: string, worktreeId: string) => {
+      setWorktreesOverrides((prev) => {
+        const current = prev[projectId] ?? getWorktreesForProject(projectId);
+        const filtered = current.filter((wt) => wt.id !== worktreeId);
+        // Don't allow deleting the last worktree
+        if (filtered.length === 0) return prev;
+        return { ...prev, [projectId]: filtered };
+      });
+    },
+    [],
+  );
+
   // Compute displayed branch: hovered takes priority, otherwise show first branch as default
   const displayedBranch = useMemo(() => {
     if (hoveredBranch) return hoveredBranch;
@@ -279,6 +345,169 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
                   className="w-64 pl-9 pr-3 py-2 bg-muted/50 border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
                 />
               </div>
+
+              {/* Filter Button */}
+              <div className="relative">
+                <button
+                  ref={filterButtonRef}
+                  onClick={() => isFilterDropdownOpen ? setIsFilterDropdownOpen(false) : openFilterDropdown()}
+                  className={cn(
+                    'flex items-center justify-center p-2 border rounded-lg transition-colors',
+                    activeFilterCount > 0
+                      ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
+                      : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                  title="Filter projects"
+                >
+                  <Filter size={18} />
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Filter Dropdown - rendered via portal */}
+                {isFilterDropdownOpen && createPortal(
+                  <div
+                    ref={filterDropdownRef}
+                    className="fixed min-w-[220px] bg-card border border-border rounded-lg shadow-xl z-[200] py-3 max-h-[70vh] overflow-y-auto"
+                    style={{ top: filterDropdownPosition.top, left: filterDropdownPosition.left }}
+                  >
+                      {/* Header with clear button */}
+                      <div className="flex items-center justify-between px-4 pb-3 border-b border-border mb-3">
+                        <span className="text-sm font-medium text-foreground">Filters</span>
+                        {activeFilterCount > 0 && (
+                          <button
+                            onClick={() => {
+                              setSidebarFilters(DEFAULT_PROJECT_SIDEBAR_FILTERS);
+                              setFilter('all');
+                            }}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <X size={12} />
+                            Clear all
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Ownership Filters */}
+                      <div className="px-4 mb-4">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                          Ownership
+                        </span>
+                        <div className="flex flex-col gap-1">
+                          {[
+                            { id: 'mine' as const, label: 'My projects' },
+                            { id: 'shared' as const, label: 'Shared with me' },
+                          ].map((option) => {
+                            const isActive = filter === option.id;
+                            return (
+                              <button
+                                key={option.id}
+                                onClick={() => setFilter(isActive ? 'all' : option.id)}
+                                className={cn(
+                                  'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                  isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                    isActive ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                                  )}
+                                >
+                                  {isActive && <Check size={12} className="text-primary-foreground" />}
+                                </span>
+                                <span>{option.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Status Filters */}
+                      <div className="px-4 mb-4">
+                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                          Status
+                        </span>
+                        <div className="flex flex-col gap-1">
+                          {(['starred', 'archived'] as const).map((status) => {
+                            const isActive = sidebarFilters.quickFilter === status;
+                            return (
+                              <button
+                                key={status}
+                                onClick={() =>
+                                  setSidebarFilters({
+                                    ...sidebarFilters,
+                                    quickFilter: isActive ? null : status,
+                                  })
+                                }
+                                className={cn(
+                                  'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                  isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                    isActive ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                                  )}
+                                >
+                                  {isActive && <Check size={12} className="text-primary-foreground" />}
+                                </span>
+                                <span className="capitalize">{status}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Tag Filters */}
+                      {allTags.length > 0 && (
+                        <div className="px-4">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
+                            Tags
+                          </span>
+                          <div className="flex flex-col gap-1">
+                            {allTags.map((tag) => {
+                              const isSelected = sidebarFilters.selectedTags.includes(tag);
+                              return (
+                                <button
+                                  key={tag}
+                                  onClick={() =>
+                                    setSidebarFilters({
+                                      ...sidebarFilters,
+                                      selectedTags: isSelected
+                                        ? sidebarFilters.selectedTags.filter((t) => t !== tag)
+                                        : [...sidebarFilters.selectedTags, tag],
+                                    })
+                                  }
+                                  className={cn(
+                                    'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
+                                    isSelected ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+                                  )}
+                                >
+                                  <span
+                                    className={cn(
+                                      'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
+                                      isSelected ? 'bg-primary border-primary' : 'border-muted-foreground/40'
+                                    )}
+                                  >
+                                    {isSelected && <Check size={12} className="text-primary-foreground" />}
+                                  </span>
+                                  <span>{tag}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>,
+                  document.body
+                )}
+              </div>
+
               {/* View Toggle */}
               <div className="flex items-center bg-muted/50 border border-border rounded-lg p-1">
                 <button
@@ -399,6 +628,8 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
                   onBranchNewIngestion={() => openIngestionModalEmpty()}
                   onRenameBranch={(worktreeId, oldName, newName) => handleRenameBranch(selectedProject.id, worktreeId, oldName, newName)}
                   onAddBranch={(worktreeId) => handleAddBranch(selectedProject.id, worktreeId)}
+                  onAddWorktree={() => handleAddWorktree(selectedProject.id)}
+                  onDeleteWorktree={(worktreeId) => handleDeleteWorktree(selectedProject.id, worktreeId)}
                   onBranchHover={handleBranchHover}
                 />
               ) : (

@@ -36,104 +36,15 @@ interface ExplorerFile {
   children?: ExplorerFile[];
 }
 
-// Branch-specific mock data
-const BRANCH_DATA: Record<string, { ingestions: IngestionItem[]; files: ExplorerFile[]; tokens: number }> = {
-  main: {
-    tokens: 2456834,
-    ingestions: [
-      { id: '1', name: 'Full project sync', type: 'repo', size: '12 MB', status: 'cached' },
-      { id: '2', name: 'Core services', type: 'file', size: '4.5 MB', status: 'cached' },
-      { id: '3', name: 'Auth module', type: 'file', size: '890 KB', status: 'cached' },
-      { id: '4', name: 'Database schema', type: 'file', size: '230 KB', status: 'cached' },
-      { id: '5', name: 'API routes', type: 'folder', size: '1.8 MB', status: 'cached' },
-      { id: '6', name: 'Utility functions', type: 'file', size: '450 KB', status: 'cached' },
-      { id: '7', name: 'Test suite', type: 'repo', size: '3.2 MB', status: 'cached' },
-    ],
-    files: [
-      { id: '1', name: 'src', type: 'folder', size: 0, isFolder: true },
-      { id: '2', name: 'App.tsx', type: 'typescript', size: 12148, parentId: '1' },
-      { id: '3', name: 'index.ts', type: 'typescript', size: 3148, parentId: '1' },
-      { id: '4', name: 'package.json', type: 'json', size: 2740 },
-      { id: '5', name: 'README.md', type: 'markdown', size: 4520 },
-      { id: '6', name: 'tsconfig.json', type: 'json', size: 800 },
-    ],
-  },
-  develop: {
-    tokens: 1834521,
-    ingestions: [
-      { id: '1', name: 'Development sync', type: 'repo', size: '8.2 MB', status: 'cached' },
-      { id: '2', name: 'New features', type: 'folder', size: '2.1 MB', status: 'pending' },
-      { id: '3', name: 'Bug fixes batch', type: 'file', size: '560 KB', status: 'cached' },
-      { id: '4', name: 'Refactored components', type: 'file', size: '1.4 MB', status: 'expired' },
-      { id: '5', name: 'Updated tests', type: 'repo', size: '1.9 MB', status: 'pending' },
-    ],
-    files: [
-      { id: '1', name: 'features', type: 'folder', size: 0, isFolder: true },
-      { id: '2', name: 'NewDashboard.tsx', type: 'typescript', size: 18450, parentId: '1' },
-      { id: '3', name: 'UserSettings.tsx', type: 'typescript', size: 9780, parentId: '1' },
-      { id: '4', name: 'Notifications.tsx', type: 'typescript', size: 6230, parentId: '1' },
-      { id: '5', name: 'dev.config.ts', type: 'typescript', size: 1890 },
-    ],
-  },
-  'feature/auth': {
-    tokens: 523890,
-    ingestions: [
-      { id: '1', name: 'Auth module update', type: 'file', size: '890 KB', status: 'cached' },
-      { id: '2', name: 'OAuth integration', type: 'file', size: '340 KB', status: 'pending' },
-      { id: '3', name: 'Session management', type: 'file', size: '210 KB', status: 'cached' },
-    ],
-    files: [
-      { id: '1', name: 'auth', type: 'folder', size: 0, isFolder: true },
-      { id: '2', name: 'AuthProvider.tsx', type: 'typescript', size: 8920, parentId: '1' },
-      { id: '3', name: 'useAuth.ts', type: 'typescript', size: 3148, parentId: '1' },
-      { id: '4', name: 'LoginForm.tsx', type: 'typescript', size: 5420, parentId: '1' },
-      { id: '5', name: 'auth.types.ts', type: 'typescript', size: 1240, parentId: '1' },
-    ],
-  },
-  'develop-new UI': {
-    tokens: 892340,
-    ingestions: [
-      { id: '1', name: 'UI Components', type: 'folder', size: '3.2 MB', status: 'cached' },
-      { id: '2', name: 'Design system', type: 'file', size: '1.1 MB', status: 'cached' },
-      { id: '3', name: 'Theme updates', type: 'file', size: '420 KB', status: 'pending' },
-      { id: '4', name: 'Icon set', type: 'folder', size: '890 KB', status: 'cached' },
-    ],
-    files: [
-      { id: '1', name: 'components', type: 'folder', size: 0, isFolder: true },
-      { id: '2', name: 'Button.tsx', type: 'typescript', size: 4520, parentId: '1' },
-      { id: '3', name: 'Card.tsx', type: 'typescript', size: 3210, parentId: '1' },
-      { id: '4', name: 'Modal.tsx', type: 'typescript', size: 6890, parentId: '1' },
-      { id: '5', name: 'theme.css', type: 'css', size: 8920 },
-      { id: '6', name: 'variables.css', type: 'css', size: 2340 },
-    ],
-  },
-  'develop-payment': {
-    tokens: 678234,
-    ingestions: [
-      { id: '1', name: 'Payment gateway', type: 'file', size: '1.8 MB', status: 'cached' },
-      { id: '2', name: 'Stripe integration', type: 'file', size: '920 KB', status: 'cached' },
-      { id: '3', name: 'Invoice system', type: 'folder', size: '1.4 MB', status: 'pending' },
-    ],
-    files: [
-      { id: '1', name: 'payments', type: 'folder', size: 0, isFolder: true },
-      { id: '2', name: 'PaymentForm.tsx', type: 'typescript', size: 12300, parentId: '1' },
-      { id: '3', name: 'stripe.config.ts', type: 'typescript', size: 2740, parentId: '1' },
-      { id: '4', name: 'invoice.types.ts', type: 'typescript', size: 1840, parentId: '1' },
-    ],
-  },
-};
+// Empty initial state - data is populated via ingestion
+// Branch-specific data would come from API in production
+const BRANCH_DATA: Record<string, { ingestions: IngestionItem[]; files: ExplorerFile[]; tokens: number }> = {};
 
-// Default data for unknown branches
+// Default empty state for new projects/branches
 const DEFAULT_DATA = {
-  tokens: 345000,
-  ingestions: [
-    { id: '1', name: 'Branch sync', type: 'repo' as const, size: '2.1 MB', status: 'cached' as const },
-    { id: '2', name: 'Local changes', type: 'file' as const, size: '340 KB', status: 'pending' as const },
-  ],
-  files: [
-    { id: '1', name: 'src', type: 'folder' as const, size: 0, isFolder: true },
-    { id: '2', name: 'index.ts', type: 'typescript' as const, size: 1240, parentId: '1' },
-  ],
+  tokens: 0,
+  ingestions: [] as IngestionItem[],
+  files: [] as ExplorerFile[],
 };
 
 // Get data for a specific branch

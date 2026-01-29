@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { Copy, Pencil, ExternalLink, FileUp, GitBranchPlus, ZoomIn, ZoomOut, Maximize2, MoreVertical } from 'lucide-react';
+import { Copy, Pencil, ExternalLink, FileUp, GitBranchPlus, ZoomIn, ZoomOut, Maximize2, MoreVertical, Plus, FolderPlus, Trash2 } from 'lucide-react';
 import type { Project, WorktreeWithBranches, Branch } from '../../types';
 
 // Layout constants
@@ -151,18 +151,24 @@ interface RepoMindmapProps {
   onBranchNewIngestion?: (worktreeId: string, branchName: string) => void;
   onRenameBranch?: (worktreeId: string, oldName: string, newName: string) => void;
   onAddBranch?: (worktreeId: string) => void;
+  onAddWorktree?: () => void;
+  onDeleteWorktree?: (worktreeId: string) => void;
   onBranchHover?: (worktreeId: string, branchName: string) => void;
 }
 
 export function RepoMindmap({
   project, worktrees, onBranchClick,
   onDuplicateWorktree, onRenameWorktree, onWorktreeNewIngestion,
-  onBranchOpen, onBranchNewIngestion, onRenameBranch, onAddBranch,
+  onBranchOpen, onBranchNewIngestion, onRenameBranch, onAddBranch, onAddWorktree, onDeleteWorktree,
   onBranchHover,
 }: RepoMindmapProps) {
   const layout = useMemo(() => computeLayout(worktrees), [worktrees]);
   const [hoveredBranch, setHoveredBranch] = useState<string | null>(null);
+  const [hoveredWorktree, setHoveredWorktree] = useState<string | null>(null);
+  const [showGhostWorktree, setShowGhostWorktree] = useState(false);
+  const [showGhostBranch, setShowGhostBranch] = useState<string | null>(null); // worktreeId
   const [ctxMenu, setCtxMenu] = useState<ContextMenu | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ worktreeId: string; worktreeName: string } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [renamingBranch, setRenamingBranch] = useState<{ worktreeId: string; branchName: string } | null>(null);
@@ -238,6 +244,9 @@ export function RepoMindmap({
       panOrigin.current = { ...pan };
       (e.target as Element).setPointerCapture(e.pointerId);
       e.preventDefault();
+      // Clear ghost states when clicking empty area
+      setShowGhostWorktree(false);
+      setShowGhostBranch(null);
     }
   }, [pan]);
 
@@ -358,9 +367,17 @@ export function RepoMindmap({
                 <path
                   d={folderPath(wt.x, wt.y, WT_W, WT_H)}
                   fill="#141a2a"
-                  stroke={color.border}
-                  strokeWidth={1.5}
-                  style={{ cursor: 'context-menu' }}
+                  stroke={hoveredWorktree === wt.id ? color.accent : color.border}
+                  strokeWidth={hoveredWorktree === wt.id ? 2 : 1.5}
+                  style={{ cursor: 'pointer', transition: 'all 150ms ease' }}
+                  onMouseEnter={() => setHoveredWorktree(wt.id)}
+                  onMouseLeave={() => setHoveredWorktree(null)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Toggle ghost worktree preview
+                    setShowGhostWorktree((prev) => !prev);
+                    setShowGhostBranch(null);
+                  }}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -456,7 +473,13 @@ export function RepoMindmap({
                   return (
                     <g
                       key={br.name}
-                      onClick={() => onBranchClick(project.id, wt.id, br.name)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Toggle ghost branch for this worktree
+                        setShowGhostBranch((prev) => (prev === wt.id ? null : wt.id));
+                        setShowGhostWorktree(false);
+                        onBranchClick(project.id, wt.id, br.name);
+                      }}
                       onContextMenu={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -598,6 +621,178 @@ export function RepoMindmap({
               </g>
             );
           })}
+
+          {/* Ghost worktree preview - appears below last worktree */}
+          {showGhostWorktree && layout.worktrees.length > 0 && (() => {
+            const lastWt = layout.worktrees[layout.worktrees.length - 1];
+            const nextColorIdx = layout.worktrees.length % COLORS.length;
+            const color = COLORS[nextColorIdx];
+            const ghostY = lastWt.y + WT_H + WT_GAP;
+            const ghostCenterY = ghostY + WT_H / 2;
+
+            // Ghost branch position
+            const branchX = lastWt.x + WT_W + H_GAP;
+            const branchY = ghostCenterY - BR_H / 2;
+            const branchCenterY = branchY + BR_H / 2;
+            const startX = lastWt.x + WT_W;
+            const endX = branchX;
+            const cpX = startX + (endX - startX) / 2;
+            const branchConnectorPath = `M${startX},${ghostCenterY} C${cpX},${ghostCenterY} ${cpX},${branchCenterY} ${endX},${branchCenterY}`;
+
+            return (
+              <g
+                style={{ cursor: 'pointer', opacity: 0.6 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddWorktree?.();
+                  setShowGhostWorktree(false);
+                }}
+              >
+                {/* Dashed connector from last worktree to ghost */}
+                <line
+                  x1={lastWt.x + WT_W / 2}
+                  y1={lastWt.y + WT_H}
+                  x2={lastWt.x + WT_W / 2}
+                  y2={ghostY}
+                  stroke={color.accent}
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.5}
+                />
+                {/* Ghost folder shape */}
+                <path
+                  d={folderPath(lastWt.x, ghostY, WT_W, WT_H)}
+                  fill="#141a2a"
+                  stroke={color.accent}
+                  strokeWidth={1.5}
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.7}
+                />
+                {/* Folder Plus icon */}
+                <FolderPlus
+                  x={lastWt.x + WT_W / 2 - 12}
+                  y={ghostY + WT_H / 2 - 12}
+                  width={24}
+                  height={24}
+                  stroke={color.accent}
+                  strokeWidth={1.5}
+                />
+
+                {/* Ghost branch connector */}
+                <path
+                  d={branchConnectorPath}
+                  fill="none"
+                  stroke={color.accent}
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.4}
+                />
+                {/* Ghost branch dot */}
+                <circle
+                  cx={branchX}
+                  cy={branchCenterY}
+                  r={4.5}
+                  fill={color.accent}
+                  fillOpacity={0.4}
+                />
+                {/* Ghost branch rect */}
+                <rect
+                  x={branchX}
+                  y={branchY}
+                  width={BR_W}
+                  height={BR_H}
+                  rx={8}
+                  fill="#1a1f2e"
+                  stroke={color.accent}
+                  strokeWidth={1}
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.5}
+                />
+                {/* Ghost branch text */}
+                <text
+                  x={branchX + BR_W / 2}
+                  y={branchCenterY}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill={color.accent}
+                  fillOpacity={0.6}
+                  fontSize={11}
+                  fontFamily="inherit"
+                >
+                  main
+                </text>
+              </g>
+            );
+          })()}
+
+          {/* Ghost branch preview - appears below last branch of hovered worktree */}
+          {hoveredBranch && (() => {
+            const [worktreeId] = hoveredBranch.split('-');
+            const wtIdx = layout.worktrees.findIndex(wt => wt.id === worktreeId);
+            if (wtIdx === -1) return null;
+            const wt = layout.worktrees[wtIdx];
+            const color = COLORS[wtIdx % COLORS.length];
+            const lastBranch = wt.branches[wt.branches.length - 1];
+            if (!lastBranch) return null;
+
+            const ghostY = lastBranch.y + BR_GAP;
+            const ghostCenterY = ghostY + BR_H / 2;
+            const wtCenterY = wt.y + WT_H / 2;
+            const startX = wt.x + WT_W;
+            const endX = lastBranch.x;
+            const cpX = startX + (endX - startX) / 2;
+            const connectorPath = `M${startX},${wtCenterY} C${cpX},${wtCenterY} ${cpX},${ghostCenterY} ${endX},${ghostCenterY}`;
+
+            return (
+              <g
+                style={{ cursor: 'pointer', opacity: 0.5 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddBranch?.(worktreeId);
+                }}
+              >
+                {/* Ghost connector */}
+                <path
+                  d={connectorPath}
+                  fill="none"
+                  stroke={color.accent}
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  strokeOpacity={0.4}
+                />
+                {/* Ghost dot */}
+                <circle
+                  cx={lastBranch.x}
+                  cy={ghostCenterY}
+                  r={4.5}
+                  fill={color.accent}
+                  fillOpacity={0.4}
+                />
+                {/* Ghost branch rect */}
+                <rect
+                  x={lastBranch.x}
+                  y={ghostY}
+                  width={BR_W}
+                  height={BR_H}
+                  rx={8}
+                  fill="#1a1f2e"
+                  stroke={color.accent}
+                  strokeWidth={1}
+                  strokeDasharray="6 4"
+                  strokeOpacity={0.6}
+                />
+                {/* Plus icon */}
+                <Plus
+                  x={lastBranch.x + BR_W / 2 - 10}
+                  y={ghostY + BR_H / 2 - 10}
+                  width={20}
+                  height={20}
+                  stroke={color.accent}
+                  strokeWidth={1.5}
+                />
+              </g>
+            );
+          })()}
           </g>
         </svg>
 
@@ -674,6 +869,18 @@ export function RepoMindmap({
                   <Copy size={14} className="shrink-0 opacity-60" />
                   Duplicate
                 </button>
+                <div className="my-1 border-t border-border" />
+                <button
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+                  onClick={() => {
+                    const wt = worktrees.find((w) => w.id === ctxMenu.worktreeId);
+                    setDeleteConfirm({ worktreeId: ctxMenu.worktreeId, worktreeName: wt?.name ?? '' });
+                    setCtxMenu(null);
+                  }}
+                >
+                  <Trash2 size={14} className="shrink-0 opacity-60" />
+                  Delete
+                </button>
               </>
             ) : (
               <>
@@ -721,6 +928,43 @@ export function RepoMindmap({
                 </button>
               </>
             )}
+          </div>
+        )}
+
+        {/* Delete confirmation dialog */}
+        {deleteConfirm && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50">
+            <div className="bg-[#1a1f2e] border border-border rounded-xl p-5 shadow-2xl max-w-sm w-full mx-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <Trash2 size={20} className="text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-slate-100">Delete Worktree</h3>
+                  <p className="text-sm text-slate-400">This action cannot be undone</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-300 mb-5">
+                Are you sure you want to delete <span className="font-semibold text-slate-100">/{deleteConfirm.worktreeName}</span>?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-slate-100 hover:bg-white/5 rounded-lg transition-colors"
+                >
+                  No, Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteWorktree?.(deleteConfirm.worktreeId);
+                    setDeleteConfirm(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+                >
+                  Yes, Delete
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

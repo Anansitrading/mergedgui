@@ -78,6 +78,7 @@ const WORKTREE_DATA: Record<string, WorktreeWithBranches[]> = {
   ],
 };
 
+// Default state for new projects - only main branch
 const DEFAULT_WORKTREES: WorktreeWithBranches[] = [
   {
     id: 'wt-default-1',
@@ -86,8 +87,7 @@ const DEFAULT_WORKTREES: WorktreeWithBranches[] = [
     isActive: true,
     currentBranch: 'main',
     branches: [
-      { name: 'main', isDefault: true, isCurrent: true, lastCommit: '2h ago' },
-      { name: 'develop', isDefault: false, isCurrent: false, lastCommit: '5h ago' },
+      { name: 'main', isDefault: true, isCurrent: true, lastCommit: 'No commits yet' },
     ],
   },
 ];

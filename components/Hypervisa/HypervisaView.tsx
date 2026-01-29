@@ -21,13 +21,8 @@ import { cn } from "../../utils/cn";
 import { ContextItem, IngestionConfig } from "../../types";
 import { IngestionWizard } from "./IngestionWizard";
 
-// Mock context data
-const MOCK_CONTEXT: ContextItem[] = [
-  { id: "1", name: "panopticon-core", type: "repo", size: "2.4 MB", status: "cached" },
-  { id: "2", name: "api-spec-v2.json", type: "file", size: "450 KB", status: "cached" },
-  { id: "3", name: "memory-dump-242.bin", type: "file", size: "12 MB", status: "expired" },
-  { id: "4", name: "hyperglyph-ui", type: "repo", size: "5.1 MB", status: "pending" },
-];
+// Empty initial state - documents are added via ingestion
+const INITIAL_CONTEXT: ContextItem[] = [];
 
 type ViewMode = "list" | "grid";
 
@@ -278,7 +273,7 @@ export function HypervisaView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
-  const [contextItems, setContextItems] = useState<ContextItem[]>(MOCK_CONTEXT);
+  const [contextItems, setContextItems] = useState<ContextItem[]>(INITIAL_CONTEXT);
 
   // Navigate to the full-page Context Detail Inspector
   const handleItemClick = (item: ContextItem) => {

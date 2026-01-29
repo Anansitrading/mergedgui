@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Plus, Filter, X, Check, MoreVertical } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { Plus, MoreVertical } from 'lucide-react';
 import type { Project, ProjectFilter } from '../../types';
 import { ProjectContextMenu } from './ProjectContextMenu';
 
@@ -124,17 +123,12 @@ function SidebarProjectItem({
   );
 }
 
-const OWNERSHIP_OPTIONS: { id: ProjectFilter; label: string }[] = [
-  { id: 'mine', label: 'My projects' },
-  { id: 'shared', label: 'Shared with me' },
-];
-
 export function ProjectsFilterSidebar({
   projects,
-  allTags,
-  filters,
-  onFiltersChange,
-  activeFilterCount,
+  allTags: _allTags,
+  filters: _filters,
+  onFiltersChange: _onFiltersChange,
+  activeFilterCount: _activeFilterCount,
   onProjectClick,
   onProjectOpen,
   onProjectShare,
@@ -143,13 +137,18 @@ export function ProjectsFilterSidebar({
   onProjectUnarchive,
   onProjectDelete,
   onCreateNew,
-  ownershipFilter,
-  onOwnershipFilterChange,
+  ownershipFilter: _ownershipFilter,
+  onOwnershipFilterChange: _onOwnershipFilterChange,
 }: ProjectsFilterSidebarProps) {
+  // Note: filter-related props kept for API compatibility but filter UI moved to header
+  void _allTags;
+  void _filters;
+  void _onFiltersChange;
+  void _activeFilterCount;
+  void _ownershipFilter;
+  void _onOwnershipFilterChange;
+
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
-  const filterButtonRef = useRef<HTMLButtonElement>(null);
   const isResizing = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -197,202 +196,15 @@ export function ProjectsFilterSidebar({
         className="absolute top-0 right-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors z-10"
       />
       <div className="pr-4 border-r border-border h-full overflow-y-auto flex flex-col">
-        {/* Create New Button, Search & Filter */}
+        {/* Create New Button */}
         <div className="mb-4">
-          <div className="flex gap-2">
-            <button
-              onClick={onCreateNew}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-            >
-              <Plus size={16} />
-              <span>New</span>
-            </button>
-
-            {/* Filter Button */}
-            <div className="relative">
-            <button
-              ref={filterButtonRef}
-              onClick={() => {
-                if (!isFilterDropdownOpen && filterButtonRef.current) {
-                  const rect = filterButtonRef.current.getBoundingClientRect();
-                  setDropdownPosition({
-                    top: rect.bottom + 8,
-                    left: rect.left,
-                  });
-                }
-                setIsFilterDropdownOpen(!isFilterDropdownOpen);
-              }}
-              className={cn(
-                'flex items-center justify-center p-2 border rounded-lg transition-colors',
-                activeFilterCount > 0
-                  ? 'bg-primary/10 border-primary/30 text-primary'
-                  : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
-              )}
-              title="Filter projects"
-            >
-              <Filter size={16} />
-              {activeFilterCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] flex items-center justify-center text-[10px] font-medium bg-primary text-primary-foreground rounded-full">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-
-            {isFilterDropdownOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsFilterDropdownOpen(false)}
-                />
-                <div
-                  className="fixed min-w-[220px] bg-card border border-border rounded-lg shadow-xl z-50 py-3"
-                  style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
-                >
-                  {/* Header with clear button */}
-                  <div className="flex items-center justify-between px-4 pb-3 border-b border-border mb-3">
-                    <span className="text-sm font-medium text-foreground">Filters</span>
-                    {activeFilterCount > 0 && (
-                      <button
-                        onClick={() => {
-                          onFiltersChange(DEFAULT_PROJECT_SIDEBAR_FILTERS);
-                          onOwnershipFilterChange('all');
-                        }}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <X size={12} />
-                        Clear all
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Ownership Filters */}
-                  <div className="px-4 mb-4">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                      Ownership
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      {OWNERSHIP_OPTIONS.map((option) => {
-                        const isActive = ownershipFilter === option.id;
-                        return (
-                          <button
-                            key={option.id}
-                            onClick={() =>
-                              onOwnershipFilterChange(isActive ? 'all' : option.id)
-                            }
-                            className={cn(
-                              'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                              isActive
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-foreground hover:bg-muted'
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
-                                isActive
-                                  ? 'bg-primary border-primary'
-                                  : 'border-muted-foreground/40'
-                              )}
-                            >
-                              {isActive && <Check size={12} className="text-primary-foreground" />}
-                            </span>
-                            <span>{option.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Status Filters */}
-                  <div className="px-4 mb-4">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                      Status
-                    </span>
-                    <div className="flex flex-col gap-1">
-                      {(['starred', 'archived'] as const).map((status) => {
-                        const isActive = filters.quickFilter === status;
-                        return (
-                          <button
-                            key={status}
-                            onClick={() =>
-                              onFiltersChange({
-                                ...filters,
-                                quickFilter: isActive ? null : status,
-                              })
-                            }
-                            className={cn(
-                              'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                              isActive
-                                ? 'bg-primary/10 text-primary'
-                                : 'text-foreground hover:bg-muted'
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
-                                isActive
-                                  ? 'bg-primary border-primary'
-                                  : 'border-muted-foreground/40'
-                              )}
-                            >
-                              {isActive && <Check size={12} className="text-primary-foreground" />}
-                            </span>
-                            <span className="capitalize">{status}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Tag Filters */}
-                  {allTags.length > 0 && (
-                    <div className="px-4">
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
-                        Tags
-                      </span>
-                      <div className="flex flex-col gap-1">
-                        {allTags.map((tag) => {
-                          const isSelected = filters.selectedTags.includes(tag);
-                          return (
-                            <button
-                              key={tag}
-                              onClick={() =>
-                                onFiltersChange({
-                                  ...filters,
-                                  selectedTags: isSelected
-                                    ? filters.selectedTags.filter((t) => t !== tag)
-                                    : [...filters.selectedTags, tag],
-                                })
-                              }
-                              className={cn(
-                                'flex items-center gap-3 w-full text-left px-3 py-2 rounded-md text-sm transition-colors',
-                                isSelected
-                                  ? 'bg-primary/10 text-primary'
-                                  : 'text-foreground hover:bg-muted'
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0',
-                                  isSelected
-                                    ? 'bg-primary border-primary'
-                                    : 'border-muted-foreground/40'
-                                )}
-                              >
-                                {isSelected && <Check size={12} className="text-primary-foreground" />}
-                              </span>
-                              <span>{tag}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-          </div>
+          <button
+            onClick={onCreateNew}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+          >
+            <Plus size={16} />
+            <span>New</span>
+          </button>
         </div>
 
         {/* Projects List */}
