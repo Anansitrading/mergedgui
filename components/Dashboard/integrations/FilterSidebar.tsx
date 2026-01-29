@@ -431,23 +431,25 @@ export function FilterSidebar({
           )}
         </div>
 
-        {/* Integrations List */}
+        {/* My Integrations List - Only show connected integrations */}
         <div className="flex-1 min-h-0">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Integrations ({integrations.length})
+            My Integrations ({integrations.filter((i) => i.isConnected).length})
           </div>
           <div className="flex flex-col gap-0.5">
-            {integrations.map((integration) => (
-              <SidebarIntegrationItem
-                key={integration.id}
-                integration={integration}
-                onClick={() => onIntegrationClick?.(integration.id)}
-                isSelected={selectedIntegrationId === integration.id}
-              />
-            ))}
-            {integrations.length === 0 && (
+            {integrations
+              .filter((integration) => integration.isConnected)
+              .map((integration) => (
+                <SidebarIntegrationItem
+                  key={integration.id}
+                  integration={integration}
+                  onClick={() => onIntegrationClick?.(integration.id)}
+                  isSelected={selectedIntegrationId === integration.id}
+                />
+              ))}
+            {integrations.filter((i) => i.isConnected).length === 0 && (
               <p className="text-sm text-muted-foreground py-4 text-center">
-                No integrations found
+                No connected integrations
               </p>
             )}
           </div>

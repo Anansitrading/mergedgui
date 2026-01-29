@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
-import { Copy, Pencil, ExternalLink, FileUp, GitBranchPlus, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Copy, Pencil, ExternalLink, FileUp, GitBranchPlus, ZoomIn, ZoomOut, Maximize2, MoreVertical } from 'lucide-react';
 import type { Project, WorktreeWithBranches, Branch } from '../../types';
 
 // Layout constants
@@ -395,19 +395,57 @@ export function RepoMindmap({
                     />
                   </foreignObject>
                 ) : (
-                  <text
-                    x={wt.x + WT_W / 2}
-                    y={wt.y + WT_H / 2}
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    fill="#e2e8f0"
-                    fontSize={14}
-                    fontWeight={600}
-                    fontFamily="inherit"
-                    style={{ pointerEvents: 'none' }}
-                  >
-                    /{wt.name}
-                  </text>
+                  <>
+                    <text
+                      x={wt.x + WT_W / 2}
+                      y={wt.y + WT_H / 2}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      fill="#e2e8f0"
+                      fontSize={14}
+                      fontWeight={600}
+                      fontFamily="inherit"
+                      style={{ pointerEvents: 'none' }}
+                    >
+                      /{wt.name}
+                    </text>
+                    {/* Three-dots menu button */}
+                    <g
+                      style={{ cursor: 'pointer' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!containerRef.current) return;
+                        const svgX = wt.x + WT_W - 20;
+                        const svgY = wt.y + 8;
+                        const screenX = svgX * scale + pan.x;
+                        const screenY = svgY * scale + pan.y;
+                        setCtxMenu({
+                          type: 'worktree',
+                          worktreeId: wt.id,
+                          x: screenX,
+                          y: screenY,
+                        });
+                      }}
+                    >
+                      <rect
+                        x={wt.x + WT_W - 28}
+                        y={wt.y + 4}
+                        width={20}
+                        height={20}
+                        rx={4}
+                        fill="transparent"
+                        className="hover:fill-white/10"
+                      />
+                      <MoreVertical
+                        x={wt.x + WT_W - 26}
+                        y={wt.y + 6}
+                        width={16}
+                        height={16}
+                        stroke="#94a3b8"
+                        strokeWidth={1.5}
+                      />
+                    </g>
+                  </>
                 )}
 
                 {/* Branches */}
@@ -503,17 +541,56 @@ export function RepoMindmap({
                           />
                         </foreignObject>
                       ) : (
-                        <text
-                          x={br.x + (br.isCurrent ? 26 : 12)}
-                          y={br.y + BR_H / 2}
-                          dominantBaseline="central"
-                          fill={isHovered ? '#f1f5f9' : '#cbd5e1'}
-                          fontSize={12}
-                          fontFamily="inherit"
-                          style={{ transition: 'fill 150ms ease', pointerEvents: 'none' }}
-                        >
-                          {br.name.length > 18 ? br.name.slice(0, 18) + '...' : br.name}
-                        </text>
+                        <>
+                          <text
+                            x={br.x + (br.isCurrent ? 26 : 12)}
+                            y={br.y + BR_H / 2}
+                            dominantBaseline="central"
+                            fill={isHovered ? '#f1f5f9' : '#cbd5e1'}
+                            fontSize={12}
+                            fontFamily="inherit"
+                            style={{ transition: 'fill 150ms ease', pointerEvents: 'none' }}
+                          >
+                            {br.name.length > 16 ? br.name.slice(0, 16) + '...' : br.name}
+                          </text>
+                          {/* Three-dots menu button */}
+                          <g
+                            style={{ cursor: 'pointer' }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!containerRef.current) return;
+                              const svgX = br.x + BR_W - 20;
+                              const svgY = br.y + BR_H / 2 - 8;
+                              const screenX = svgX * scale + pan.x;
+                              const screenY = svgY * scale + pan.y;
+                              setCtxMenu({
+                                type: 'branch',
+                                worktreeId: wt.id,
+                                branchName: br.name,
+                                x: screenX,
+                                y: screenY,
+                              });
+                            }}
+                          >
+                            <rect
+                              x={br.x + BR_W - 26}
+                              y={br.y + BR_H / 2 - 10}
+                              width={20}
+                              height={20}
+                              rx={4}
+                              fill="transparent"
+                              className="hover:fill-white/10"
+                            />
+                            <MoreVertical
+                              x={br.x + BR_W - 24}
+                              y={br.y + BR_H / 2 - 8}
+                              width={16}
+                              height={16}
+                              stroke={isHovered ? '#cbd5e1' : '#64748b'}
+                              strokeWidth={1.5}
+                            />
+                          </g>
+                        </>
                       )}
                     </g>
                   );
