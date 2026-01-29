@@ -485,7 +485,7 @@ export function IntegrationsTab() {
                 <EmptyState
                   variant="no-results"
                   searchQuery={filters.search}
-                  onAction={() => setFilters(DEFAULT_FILTERS)}
+                  onAction={() => setIsCustomConnectorModalOpen(true)}
                 />
               ) : (
                 <div className={cn(

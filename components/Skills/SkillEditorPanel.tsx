@@ -18,15 +18,7 @@ import type { SkillDraft, SkillScopeSelection } from '../../types/skillDraft';
 import { defaultScopeSelection } from '../../types/skillDraft';
 
 type PreviewTab = 'code' | 'flow';
-type SkillSortBy = 'popular' | 'name' | 'recent';
-
-// Sort options for skills browse view
-const SORT_OPTIONS: { id: SkillSortBy; label: string }[] = [
-  { id: 'popular', label: 'Popular' },
-  { id: 'name', label: 'Name' },
-  { id: 'recent', label: 'Most recent' },
-];
-
+type SkillSortBy = 'popular' | 'name' | 'recent' | 'newest';
 type SkillViewMode = 'grid' | 'list';
 
 interface SkillEditorPanelProps {
@@ -119,6 +111,13 @@ export function SkillEditorPanel({
         result.sort((a, b) => {
           const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
           const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case 'newest':
+        result.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA;
         });
         break;

@@ -1,8 +1,8 @@
-// SkillsCategorySidebar Component - Sidebar with skills grouped by category
-// Shows skills in collapsible category sections
+// SkillsCategorySidebar Component - Sidebar with skills list and category filter
+// Shows flat list of skills with category filtering via dropdown
 
-import { useMemo } from 'react';
-import { Zap, FileEdit } from 'lucide-react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { Zap, FileEdit, Plus, Filter, Check, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import type { Skill, SkillCategory } from '../../types/skills';
 
@@ -32,43 +32,7 @@ interface SkillsCategorySidebarProps {
   loading?: boolean;
   isCreatingDraft?: boolean;
   onSelectDraft?: () => void;
-}
-
-interface CategorySectionProps {
-  category: SkillCategory;
-  skills: Skill[];
-  selectedSkillId: string | null;
-  onSelectSkill: (skill: Skill) => void;
-}
-
-function CategorySection({
-  category,
-  skills,
-  selectedSkillId,
-  onSelectSkill,
-}: CategorySectionProps) {
-  if (skills.length === 0) return null;
-
-  return (
-    <div className="mb-1">
-      {/* Category Header */}
-      <div className="px-2 py-1.5 text-sm font-medium text-foreground">
-        {CATEGORY_LABELS[category]}
-      </div>
-
-      {/* Skills List */}
-      <div className="ml-4 mt-0.5 space-y-0.5">
-        {skills.map((skill) => (
-          <SkillItem
-            key={skill.id}
-            skill={skill}
-            isSelected={selectedSkillId === skill.id}
-            onSelect={onSelectSkill}
-          />
-        ))}
-      </div>
-    </div>
-  );
+  onCreateNew?: () => void;
 }
 
 interface SkillItemProps {
@@ -112,27 +76,54 @@ export function SkillsCategorySidebar({
   loading = false,
   isCreatingDraft = false,
   onSelectDraft,
+  onCreateNew,
 }: SkillsCategorySidebarProps) {
   // Note: onRunSkill kept in props for API compatibility but not used in sidebar
   void _onRunSkill;
-  // Group skills by category
-  const skillsByCategory = useMemo(() => {
-    const grouped: Partial<Record<SkillCategory, Skill[]>> = {};
 
-    for (const skill of skills) {
-      if (!grouped[skill.category]) {
-        grouped[skill.category] = [];
+  // Filter state
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<SkillCategory[]>([]);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFilterOpen(false);
       }
-      grouped[skill.category]!.push(skill);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter and sort skills
+  const filteredSkills = useMemo(() => {
+    let result = skills;
+
+    // Filter by selected categories
+    if (selectedCategories.length > 0) {
+      result = result.filter((skill) => selectedCategories.includes(skill.category));
     }
 
-    // Sort skills within each category by star count (most starred first)
-    for (const category of Object.keys(grouped) as SkillCategory[]) {
-      grouped[category]!.sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
-    }
+    // Sort by star count (most starred first)
+    return [...result].sort((a, b) => (b.starCount ?? 0) - (a.starCount ?? 0));
+  }, [skills, selectedCategories]);
 
-    return grouped;
-  }, [skills]);
+  const toggleCategory = (category: SkillCategory) => {
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const clearFilters = () => {
+    setSelectedCategories([]);
+  };
+
+  const hasActiveFilters = selectedCategories.length > 0;
 
   // Loading state
   if (loading) {
@@ -142,16 +133,9 @@ export function SkillsCategorySidebar({
           <div className="px-2 py-1.5 mb-2">
             <div className="h-5 w-24 bg-muted rounded animate-pulse" />
           </div>
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="mb-3">
-              <div className="flex items-center gap-2 px-2 py-1.5">
-                <div className="w-3.5 h-3.5 bg-muted rounded animate-pulse" />
-                <div className="flex-1 h-4 bg-muted rounded animate-pulse" />
-              </div>
-              <div className="ml-4 space-y-0.5">
-                <SkillItemSkeleton />
-                <SkillItemSkeleton />
-              </div>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="px-2 mb-1">
+              <SkillItemSkeleton />
             </div>
           ))}
         </div>
@@ -159,7 +143,7 @@ export function SkillsCategorySidebar({
     );
   }
 
-  // Empty state
+  // Empty state (no skills at all)
   if (skills.length === 0) {
     return (
       <aside className="w-64 shrink-0">
@@ -175,6 +159,75 @@ export function SkillsCategorySidebar({
   return (
     <aside className="w-64 shrink-0 h-full overflow-y-auto pr-4">
       <div className="py-2">
+        {/* + New and Filter buttons */}
+        <div className="px-2 mb-4">
+          <div className="flex gap-2">
+            <button
+              onClick={onCreateNew}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+            >
+              <Plus size={16} />
+              <span>New</span>
+            </button>
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={cn(
+                  'flex items-center justify-center p-2 border rounded-lg transition-colors',
+                  hasActiveFilters
+                    ? 'bg-primary/10 border-primary/30 text-primary hover:bg-primary/20'
+                    : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground hover:bg-muted'
+                )}
+                title="Filter skills"
+              >
+                <Filter size={16} />
+                {hasActiveFilters && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                    {selectedCategories.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Filter Dropdown */}
+              {isFilterOpen && (
+                <div className="absolute left-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-xl z-50 py-2">
+                  <div className="px-3 py-2 border-b border-border flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">Filter by Category</span>
+                    {hasActiveFilters && (
+                      <button
+                        onClick={clearFilters}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                      >
+                        <X size={12} />
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <div className="py-1">
+                    {CATEGORY_ORDER.map((category) => (
+                      <button
+                        key={category}
+                        onClick={() => toggleCategory(category)}
+                        className={cn(
+                          'w-full px-3 py-2 text-sm text-left flex items-center justify-between transition-colors',
+                          selectedCategories.includes(category)
+                            ? 'bg-primary/10 text-primary'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        <span>{CATEGORY_LABELS[category]}</span>
+                        {selectedCategories.includes(category) && (
+                          <Check size={14} className="text-primary" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Draft/Concept item when creating new skill */}
         {isCreatingDraft && (
           <div className="px-2 mb-3">
@@ -195,20 +248,26 @@ export function SkillsCategorySidebar({
         {/* Skills count header */}
         <div className="px-2 py-1.5 mb-2">
           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            My Skills ({skills.length})
+            My Skills ({filteredSkills.length}{hasActiveFilters ? ` of ${skills.length}` : ''})
           </div>
         </div>
 
-        {/* Category sections */}
-        {CATEGORY_ORDER.map((category) => (
-          <CategorySection
-            key={category}
-            category={category}
-            skills={skillsByCategory[category] || []}
-            selectedSkillId={isCreatingDraft ? null : selectedSkillId}
-            onSelectSkill={onSelectSkill}
-          />
-        ))}
+        {/* Flat skills list */}
+        <div className="space-y-0.5 px-2">
+          {filteredSkills.map((skill) => (
+            <SkillItem
+              key={skill.id}
+              skill={skill}
+              isSelected={!isCreatingDraft && selectedSkillId === skill.id}
+              onSelect={onSelectSkill}
+            />
+          ))}
+          {filteredSkills.length === 0 && hasActiveFilters && (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No skills match filter
+            </p>
+          )}
+        </div>
       </div>
     </aside>
   );

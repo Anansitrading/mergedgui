@@ -1,7 +1,7 @@
 // EmptyState Component for Integrations Tab
 // Shows when no integrations are connected or found
 
-import { Link2, Zap, Search, PlugZap } from 'lucide-react';
+import { Link2, Zap, Search, PlugZap, Plus } from 'lucide-react';
 
 interface EmptyStateProps {
   variant: 'no-integrations' | 'no-results' | 'no-custom';
@@ -21,9 +21,9 @@ export function EmptyState({ variant, onAction, searchQuery }: EmptyStateProps) 
       icon: Search,
       title: 'No integrations found',
       description: searchQuery
-        ? `No integrations match "${searchQuery}". Try a different search term or create your own via + New.`
-        : "Try adjusting your filters to find what you're looking for, or create your own via + New.",
-      actionLabel: 'Clear Filters',
+        ? `No integrations match "${searchQuery}". Try a different search term or create your own.`
+        : "Try adjusting your filters to find what you're looking for, or create your own.",
+      actionLabel: 'New Integration',
     },
     'no-custom': {
       icon: Zap,
@@ -48,6 +48,7 @@ export function EmptyState({ variant, onAction, searchQuery }: EmptyStateProps) 
           className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg transition-colors"
         >
           {variant === 'no-integrations' && <Link2 size={18} />}
+          {variant === 'no-results' && <Plus size={18} />}
           {variant === 'no-custom' && <Zap size={18} />}
           {actionLabel}
         </button>

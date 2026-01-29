@@ -5,7 +5,7 @@
 // Layout Redesign: Full-width header like Integrations page
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, LayoutGrid, List, ChevronDown, X } from 'lucide-react';
+import { Search, LayoutGrid, List, ChevronDown, X } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { SkillsCategorySidebar } from '../Skills/SkillsCategorySidebar';
 import { SkillEditorPanel } from '../Skills/SkillEditorPanel';
@@ -13,13 +13,14 @@ import { ExecuteSkillModal } from '../Skills/ExecuteSkillModal';
 import { useSkills } from '../../hooks/useSkills';
 import type { Skill } from '../../types/skills';
 
-type SkillSortBy = 'popular' | 'name' | 'recent';
+type SkillSortBy = 'popular' | 'name' | 'recent' | 'newest';
 
 // Sort options for skills browse view
 const SORT_OPTIONS: { id: SkillSortBy; label: string }[] = [
   { id: 'popular', label: 'Popular' },
   { id: 'name', label: 'Name' },
   { id: 'recent', label: 'Most recent' },
+  { id: 'newest', label: 'Newest from community' },
 ];
 
 export function SkillsTab() {
@@ -158,17 +159,8 @@ export function SkillsTab() {
       {/* Full-width Header Bar */}
       <div className="shrink-0 border-b border-border bg-card/30 backdrop-blur-xl">
         <div className="flex items-center justify-between px-6 py-4">
-          {/* Left side: Title and New button */}
-          <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold text-foreground">All Skills</h1>
-            <button
-              onClick={handleCreateSkill}
-              className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
-            >
-              <Plus size={18} />
-              <span>New</span>
-            </button>
-          </div>
+          {/* Left side: Title */}
+          <h1 className="text-lg font-semibold text-foreground">All Skills</h1>
 
           {/* Right side: Search and View Controls (only when browsing) */}
           {showBrowseHeader && (
@@ -294,6 +286,7 @@ export function SkillsTab() {
                 loading={loading}
                 isCreatingDraft={isCreatingNew}
                 onSelectDraft={() => setIsCreatingNew(true)}
+                onCreateNew={handleCreateSkill}
               />
             </div>
           </div>
