@@ -13,16 +13,50 @@ import {
   X,
   GitBranch,
   Plus,
+  Eye,
+  Shield,
+  AlignLeft,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { useCompressionData } from '../ContextDetailInspector/tabs/CompressionTab/hooks';
+import type { IngestionEntry, IngestionSourceType } from '../../types/contextInspector';
 
-// Types for ingestion items
+// Types for ingestion items (mapped from IngestionEntry)
 interface IngestionItem {
   id: string;
   name: string;
-  type: 'repo' | 'file' | 'folder';
+  type: 'repo' | 'file' | 'folder' | 'text';
   size: string;
   status: 'cached' | 'expired' | 'pending';
+  compressed?: boolean;
+  neverCompress?: boolean;
+  tokens?: number;
+  compressedTokens?: number;
+}
+
+// Map IngestionEntry from service to local IngestionItem
+function mapIngestionEntry(entry: IngestionEntry): IngestionItem {
+  const getType = (sourceType?: IngestionSourceType): IngestionItem['type'] => {
+    switch (sourceType) {
+      case 'repo': return 'repo';
+      case 'text': return 'text';
+      case 'file':
+      default: return 'file';
+    }
+  };
+
+  return {
+    id: String(entry.number),
+    name: entry.displayName || `Ingestion #${entry.number}`,
+    type: getType(entry.sourceType),
+    size: entry.filesAdded ? `${entry.filesAdded} files` : '—',
+    status: 'cached', // Default to cached since these are stored
+    compressed: entry.compressed,
+    neverCompress: entry.neverCompress,
+    tokens: entry.tokens,
+    compressedTokens: entry.compressedTokens,
+  };
 }
 
 // Types for explorer files
@@ -36,27 +70,13 @@ interface ExplorerFile {
   children?: ExplorerFile[];
 }
 
-// Empty initial state - data is populated via ingestion
-// Branch-specific data would come from API in production
-const BRANCH_DATA: Record<string, { ingestions: IngestionItem[]; files: ExplorerFile[]; tokens: number }> = {};
-
-// Default empty state for new projects/branches
-const DEFAULT_DATA = {
-  tokens: 0,
-  ingestions: [] as IngestionItem[],
-  files: [] as ExplorerFile[],
-};
-
-// Get data for a specific branch
-function getBranchData(branchName: string) {
-  return BRANCH_DATA[branchName] || DEFAULT_DATA;
-}
 
 type ViewMode = 'hypervisa' | 'explorer';
 
 interface BranchDetailsPanelProps {
   branchName: string;
   worktreeId: string;
+  contextId?: string; // Project/context ID for fetching real ingestion data
   onClose?: () => void;
   onNewIngestion?: () => void;
 }
@@ -65,12 +85,37 @@ interface BranchDetailsPanelProps {
 function ItemIcon({ type }: { type: IngestionItem['type'] }) {
   switch (type) {
     case 'repo':
-      return <Package size={14} className="text-blue-400" />;
+      return <Package size={14} className="text-purple-400" />;
     case 'file':
-      return <FileText size={14} className="text-slate-400" />;
+      return <FileText size={14} className="text-blue-400" />;
+    case 'text':
+      return <AlignLeft size={14} className="text-emerald-400" />;
     default:
       return <FolderOpen size={14} className="text-amber-400" />;
   }
+}
+
+// Compression status icon component
+function CompressionIcon({ item }: { item: IngestionItem }) {
+  if (item.neverCompress) {
+    return (
+      <span title="Never compress" className="shrink-0">
+        <Shield size={12} className="text-amber-400" />
+      </span>
+    );
+  }
+  if (item.compressed) {
+    return (
+      <span title="Compressed" className="shrink-0">
+        <Eye size={12} className="text-blue-400" />
+      </span>
+    );
+  }
+  return (
+    <span title="Not compressed" className="shrink-0">
+      <Eye size={12} className="text-slate-500" />
+    </span>
+  );
 }
 
 // File type icon mapping for explorer
@@ -123,6 +168,14 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
+// Format token count
+function formatTokens(tokens: number): string {
+  if (tokens >= 1000) {
+    return `${(tokens / 1000).toFixed(1)}k`;
+  }
+  return tokens.toString();
+}
+
 // Hypervisa ingestion list view
 function HypervisaListView({ items }: { items: IngestionItem[] }) {
   return (
@@ -130,16 +183,30 @@ function HypervisaListView({ items }: { items: IngestionItem[] }) {
       {items.map((item) => (
         <div
           key={item.id}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors cursor-pointer group"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/[0.03] transition-colors cursor-pointer group"
         >
           <ItemIcon type={item.type} />
-          <span className="flex-1 text-[13px] text-slate-300 truncate">
+          <span className="flex-1 text-[13px] text-slate-300 truncate min-w-0">
             {item.name}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <CompressionIcon item={item} />
+            {item.tokens && (
+              <span className="text-[10px] text-slate-500 tabular-nums">
+                {item.compressed && item.compressedTokens != null ? (
+                  <>
+                    <span className="line-through text-slate-600">{formatTokens(item.tokens)}</span>
+                    {' '}
+                    <span className="text-blue-400">{formatTokens(item.compressedTokens)}</span>
+                  </>
+                ) : (
+                  formatTokens(item.tokens)
+                )}
+              </span>
+            )}
             <div
               className={cn(
-                'w-2 h-2 rounded-full',
+                'w-2 h-2 rounded-full shrink-0',
                 item.status === 'cached' && 'bg-emerald-500',
                 item.status === 'expired' && 'bg-amber-500',
                 item.status === 'pending' && 'bg-blue-500 animate-pulse'
@@ -211,6 +278,7 @@ function ExplorerListView({
 export function BranchDetailsPanel({
   branchName,
   worktreeId: _worktreeId,
+  contextId = 'default',
   onClose: _onClose,
   onNewIngestion,
 }: BranchDetailsPanelProps) {
@@ -221,8 +289,27 @@ export function BranchDetailsPanel({
     new Set(['1'])
   );
 
-  // Get branch-specific data
-  const branchData = useMemo(() => getBranchData(branchName), [branchName]);
+  // Get real ingestion data from the compression service
+  const { history, metrics, isLoading } = useCompressionData(contextId);
+
+  // Map ingestion entries to local format
+  const ingestionItems = useMemo(
+    () => history.map(mapIngestionEntry),
+    [history]
+  );
+
+  // Calculate totals from real data
+  const totalTokens = useMemo(
+    () => metrics?.originalTokens || 0,
+    [metrics]
+  );
+
+  // Use real data structure
+  const branchData = useMemo(() => ({
+    tokens: totalTokens,
+    ingestions: ingestionItems,
+    files: [] as ExplorerFile[],
+  }), [totalTokens, ingestionItems]);
 
   // Filter ingestion items based on search
   const filteredIngestions = useMemo(() => {
@@ -261,7 +348,14 @@ export function BranchDetailsPanel({
         {/* Branch name indicator */}
         <div className="flex items-center gap-2 px-1">
           <GitBranch size={14} className="text-emerald-400 shrink-0" />
-          <span className="text-sm font-medium text-slate-200 truncate">{branchName}</span>
+          <span className="text-sm font-medium text-slate-200 truncate flex-1">{branchName}</span>
+          <button
+            onClick={() => setIsSearchExpanded(true)}
+            className="text-slate-400 hover:text-slate-200 transition-colors shrink-0 p-1 rounded hover:bg-white/[0.05]"
+            title="Search"
+          >
+            <Search size={14} />
+          </button>
         </div>
 
         {/* View Toggle */}
@@ -290,7 +384,7 @@ export function BranchDetailsPanel({
           </button>
         </div>
 
-        {/* Search and New Ingestion */}
+        {/* Search input (expanded) and New Ingestion */}
         {isSearchExpanded ? (
           <div className="flex items-center gap-2 bg-[#0d1220] border border-[#1e293b]/40 rounded-lg px-3 py-2 focus-within:border-blue-500/40 focus-within:ring-1 focus-within:ring-blue-500/20 transition-all">
             <Search size={14} className="text-slate-500 shrink-0" />
@@ -321,35 +415,44 @@ export function BranchDetailsPanel({
               <X size={14} />
             </button>
           </div>
-        ) : (
-          <div className="flex items-stretch gap-2">
-            <button
-              onClick={() => setIsSearchExpanded(true)}
-              className={cn(
-                "bg-[#0d1220] border border-[#1e293b]/40 rounded-lg text-slate-400 hover:text-slate-200 hover:border-blue-500/40 transition-all flex items-center justify-center",
-                viewMode === 'hypervisa' ? 'w-9' : 'flex-1 py-2'
-              )}
-              title="Search"
-            >
-              <Search size={16} />
-            </button>
-            {viewMode === 'hypervisa' && (
-              <button
-                className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-all shadow-lg shadow-blue-600/20"
-                title="New Ingestion"
-                onClick={onNewIngestion}
-              >
-                <Plus size={14} />
-                <span>New Ingestion</span>
-              </button>
-            )}
-          </div>
-        )}
+        ) : viewMode === 'hypervisa' && branchData.ingestions.length > 0 ? (
+          <button
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-all shadow-lg shadow-blue-600/20"
+            title="New Ingestion"
+            onClick={onNewIngestion}
+          >
+            <Plus size={14} />
+            <span>New Ingestion</span>
+          </button>
+        ) : null}
       </div>
+
+      {/* Legend for hypervisa mode */}
+      {viewMode === 'hypervisa' && branchData.ingestions.length > 0 && (
+        <div className="shrink-0 px-3 pb-2 flex items-center gap-3 text-[10px] text-slate-500 border-b border-[#1e293b]/30">
+          <div className="flex items-center gap-1">
+            <Eye size={10} className="text-slate-500" />
+            <span>Uncompressed</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Eye size={10} className="text-blue-400" />
+            <span>Compressed</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Shield size={10} className="text-amber-400" />
+            <span>Protected</span>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-1.5">
-        {viewMode === 'hypervisa' ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center h-48 text-center px-4">
+            <Loader2 size={24} className="text-blue-400 animate-spin mb-3" />
+            <p className="text-sm text-slate-400">Loading ingestions...</p>
+          </div>
+        ) : viewMode === 'hypervisa' ? (
           filteredIngestions.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 text-center px-4">
               <div className="w-12 h-12 rounded-full bg-slate-800/50 flex items-center justify-center mb-4">

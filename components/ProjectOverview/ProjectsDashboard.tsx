@@ -16,10 +16,10 @@ import { useProjects } from '../../contexts/ProjectsContext';
 import { Project, ProjectFilter, ProjectSort, WorktreeWithBranches } from '../../types';
 import { cn } from '../../utils/cn';
 import { ProjectCreationModal } from './ProjectCreationModal';
+import type { SimpleProjectCreationForm } from './ProjectCreationModal';
 import { UserManagementModal } from './UserManagementModal';
 import { ProjectsFilterSidebar, DEFAULT_PROJECT_SIDEBAR_FILTERS } from './ProjectsFilterSidebar';
 import type { ProjectSidebarFilters } from './ProjectsFilterSidebar';
-import type { ProjectCreationForm } from '../../types/project';
 import { RepoMindmap } from './RepoMindmap';
 import { RepoListView } from './RepoListView';
 import { getWorktreesForProject } from './repoMindmapData';
@@ -27,6 +27,7 @@ import { IngestionModal } from '../../pages/ContextDetailInspectorPage/component
 import { useIngestion } from '../../contexts/IngestionContext';
 import { BranchDetailsPanel } from './BranchDetailsPanel';
 import { ProjectsOnboardingCTA } from './ProjectsOnboardingCTA';
+import { ProjectCard } from './ProjectCard';
 
 interface ProjectsDashboardProps {
   onProjectSelect: (project: Project) => void;
@@ -318,11 +319,26 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
     return null;
   }, [hoveredBranch, selectedProject, getWorktrees]);
 
-  const handleCreateProject = (data: ProjectCreationForm) => {
+  const handleCreateProject = (data: SimpleProjectCreationForm) => {
     const newProject = createProject(data.name);
-    // TODO: In future, pass full form data (description, type, repositories, etc.) to createProject
-    // Navigate to the new project's detail page
-    navigate(`/project/${newProject.id}`);
+
+    // Select the new project in the dashboard
+    selectProject(newProject);
+
+    // Close the modal
+    setIsNewProjectModalOpen(false);
+
+    // If GitHub repo was selected, show a toast notification
+    // In production, this would trigger the repo indexing process
+    if (data.sourceType === 'github' && data.githubRepo) {
+      // TODO: Start GitHub repo indexing process
+      // For now, just log the repo info
+      console.log('Loading GitHub repo:', data.githubRepo.fullName);
+      // Toast notification would be shown here: "We're loading your GitHub repo and preparing your workspace..."
+    }
+
+    // Navigate to the project dashboard overview (stay on this page with the project selected)
+    // The mindmap/overview will show for the selected project
   };
 
   // Get existing project names for duplicate checking
@@ -641,12 +657,46 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
             />
           )}
 
-          {/* Repo Mindmap or Empty State */}
+          {/* Repo Mindmap, Search Results, or Empty State */}
           <div className="flex-1 min-w-0 flex gap-0">
             <div className="flex-1 min-w-0">
             {projects.length === 0 ? (
               /* Onboarding CTA when no projects exist */
               <ProjectsOnboardingCTA onCreateProject={() => setIsNewProjectModalOpen(true)} />
+            ) : searchQuery.trim() ? (
+              /* Search results: show filtered projects as grid */
+              <div className="h-full overflow-auto">
+                {displayedProjects.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+                    <div className="p-4 bg-muted/50 rounded-xl border border-border mb-4">
+                      <Search size={40} className="text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-medium text-foreground mb-2">
+                      No projects found
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      No projects match "{searchQuery}". Try a different search term.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
+                    {displayedProjects.map((project) => (
+                      <ProjectCard
+                        key={project.id}
+                        project={project}
+                        viewMode="grid"
+                        onClick={() => {
+                          selectProject(project);
+                          setSearchQuery('');
+                        }}
+                        onMenuClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : selectedProject ? (
               viewMode === 'grid' ? (
                 <RepoMindmap
@@ -732,11 +782,12 @@ export function ProjectsDashboard({ onOpenSettings, embedded = false }: Projects
             )}
             </div>
 
-            {/* Branch Details Panel - only visible when project selected AND projects exist */}
-            {projects.length > 0 && selectedProject && displayedBranch && (
+            {/* Branch Details Panel - only visible when project selected AND projects exist AND not searching */}
+            {projects.length > 0 && selectedProject && displayedBranch && !searchQuery.trim() && (
               <BranchDetailsPanel
                 branchName={displayedBranch.branchName}
                 worktreeId={displayedBranch.worktreeId}
+                contextId={selectedProject.id}
                 onNewIngestion={openIngestionModalEmpty}
               />
             )}

@@ -67,7 +67,7 @@ export function ProjectContextMenu({
   const menuItems = [
     {
       icon: ExternalLink,
-      label: 'Openen',
+      label: 'Open',
       onClick: () => {
         onOpen?.();
         onClose();
@@ -75,7 +75,7 @@ export function ProjectContextMenu({
     },
     {
       icon: UserPlus,
-      label: 'Delen',
+      label: 'Share',
       onClick: () => {
         onShare?.();
         onClose();
@@ -83,7 +83,7 @@ export function ProjectContextMenu({
     },
     {
       icon: Star,
-      label: project.starred ? 'Starred verwijderen' : 'Starred',
+      label: project.starred ? 'Remove from starred' : 'Add to starred',
       onClick: () => {
         onToggleStarred?.();
         onClose();
@@ -91,7 +91,7 @@ export function ProjectContextMenu({
     },
     {
       icon: project.archived ? ArchiveRestore : Archive,
-      label: project.archived ? 'De-archiveren' : 'Archiveren',
+      label: project.archived ? 'Unarchive' : 'Archive',
       onClick: () => {
         if (project.archived) {
           onUnarchive?.();
@@ -103,7 +103,7 @@ export function ProjectContextMenu({
     },
     {
       icon: Trash2,
-      label: 'Verwijderen',
+      label: 'Delete',
       onClick: () => {
         setShowDeleteConfirm(true);
       },
@@ -129,10 +129,10 @@ export function ProjectContextMenu({
         /* Delete Confirmation */
         <div className="p-3">
           <p className="text-sm font-medium text-foreground mb-2">
-            Project verwijderen?
+            Delete project?
           </p>
           <p className="text-xs text-muted-foreground mb-3">
-            Dit kan niet ongedaan worden gemaakt.
+            This cannot be undone.
           </p>
           <div className="flex flex-col gap-1.5">
             <button
@@ -140,13 +140,13 @@ export function ProjectContextMenu({
               className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-md transition-colors"
             >
               <Trash2 size={16} />
-              <span>Verwijderen</span>
+              <span>Delete</span>
             </button>
             <button
               onClick={() => setShowDeleteConfirm(false)}
               className="w-full text-sm text-muted-foreground hover:text-foreground text-center py-2 transition-colors"
             >
-              Annuleren
+              Cancel
             </button>
           </div>
         </div>
