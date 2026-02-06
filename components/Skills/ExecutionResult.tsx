@@ -20,6 +20,7 @@ import {
 import { MarkdownRenderer } from './MarkdownRenderer';
 import type { SkillOutputFormat, ExecutionStatus } from '../../types/skills';
 import { cn } from '../../utils/cn';
+import DOMPurify from 'dompurify';
 
 interface ExecutionResultProps {
   status: ExecutionStatus;
@@ -259,7 +260,7 @@ function OutputContent({ content, format, showRaw }: OutputContentProps) {
           <div className="p-4 bg-card">
             <div
               className="prose prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: displayContent }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(displayContent) }}
             />
           </div>
         );
