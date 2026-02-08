@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-export type DashboardTabType = 'projects' | 'integrations' | 'skills';
+export type DashboardTabType = 'projects' | 'integrations' | 'skills' | 'hypervisa';
 
-const VALID_TABS: DashboardTabType[] = ['projects', 'integrations', 'skills'];
+const VALID_TABS: DashboardTabType[] = ['projects', 'integrations', 'skills', 'hypervisa'];
 const DEFAULT_TAB: DashboardTabType = 'projects';
 const TAB_PARAM = 'tab';
 
@@ -63,6 +63,10 @@ export function useTabNavigation() {
         case '3':
           e.preventDefault();
           setActiveTab('skills');
+          break;
+        case '4':
+          e.preventDefault();
+          setActiveTab('hypervisa');
           break;
       }
     };

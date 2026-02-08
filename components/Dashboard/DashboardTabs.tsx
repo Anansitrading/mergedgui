@@ -17,6 +17,7 @@ const DASHBOARD_TABS: TabConfig[] = [
   { id: 'projects', label: 'Projects', shortcut: 1 },
   { id: 'integrations', label: 'Integrations', shortcut: 2 },
   { id: 'skills', label: 'Skills', shortcut: 3 },
+  { id: 'hypervisa', label: 'HyperVisa', shortcut: 4 },
 ];
 
 export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
