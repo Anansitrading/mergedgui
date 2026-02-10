@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-10)
 
 **Core value:** Every mock endpoint becomes a real endpoint
-**Current focus:** Phase 2 — Core CRUD APIs
+**Current focus:** Phase 3 — Billing & Payments
 
 ## Phase 1: Foundation & Auth — COMPLETE ✅
 
@@ -17,12 +17,25 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 - **Deferred:** SQL migration deployment + RLS test execution (no Supabase credentials)
 - **Total output:** ~3,641 lines of code across 20+ files
 
+## Phase 2: Core CRUD APIs — COMPLETE ✅
+
+- Plans: 6/6 complete (Wave 1 ASYNC + Wave 2 SEQUENTIAL)
+  - 02-01: ✅ Projects CRUD (17 endpoints, 16 service functions) (commit d992c21)
+  - 02-02: ✅ Skills CRUD (11 endpoints, 8 service functions) (commit d992c21)
+  - 02-03: ✅ Habits CRUD (10 endpoints, 7 service functions) (commit d992c21)
+  - 02-04: ✅ Reflexes CRUD (10 endpoints, 8 service functions) (commit d992c21)
+  - 02-05: ✅ Executions & Analytics (6 endpoints, 4 service functions) (commit d992c21)
+  - 02-06: ✅ Celery workers (5 tasks, 12 tests all passing) (commit c9f2452)
+- **63 total API routes wired in main.py**
+- **30 tests passing (18 auth + 12 worker)**
+- **Total Phase 2 output:** ~2,753 lines across 11 new files
+
 ## Progress
 
 | Phase | Status | Plans | Progress |
 |-------|--------|-------|----------|
 | 1     | ✅     | 4/4   | 100%     |
-| 2     | ○      | 0/6   | 0%       |
+| 2     | ✅     | 6/6   | 100%     |
 | 3     | ○      | 0/3   | 0%       |
 | 4     | ○      | 0/3   | 0%       |
 | 5     | ○      | 0/4   | 0%       |
@@ -48,6 +61,18 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 - Dependencies: email-validator added for Pydantic EmailStr
 - Virtual environment at server/.venv (PEP 668 requirement)
 
+### 2026-02-10 — Phase 2 Execution (Session 3)
+- 6 plans planned and executed
+- Wave 1 (ASYNC): 5 domain routers built in sequence (context budget)
+  - Projects: 17 endpoints (repos, members, files, ingestion, validation)
+  - Skills: 11 endpoints (CRUD, execute, test, bulk, export/import)
+  - Habits: 10 endpoints (CRUD, toggle, stats, cron validation)
+  - Reflexes: 10 endpoints (CRUD, toggle, test, webhook, stats)
+  - Executions: 6 endpoints (list, detail, stats by-skill, by-period)
+- Wave 2 (SEQUENTIAL): Celery workers (5 tasks, dual LLM support)
+- 63 total routes wired, 30 tests passing
+- Dependencies added: celery, croniter
+
 ## Decisions Made
 
 | Decision | Phase | Rationale |
@@ -60,6 +85,10 @@ See: .planning/PROJECT.md (updated 2026-02-10)
 | Replace auth.uid() with auth.current_user_id() | 1 | Keycloak JWT + session var dual support |
 | OIDC discovery at startup (non-blocking) | 1 | Gracefully handles Keycloak unavailability |
 | HS256 test tokens with mocked validation | 1 | Tests don't need real Keycloak instance |
+| Stats computed in Python, not SQL views | 2 | Sufficient for MVP scale, upgrade path clear |
+| Dual LLM support (Anthropic + Gemini) | 2 | Model field determines API routing |
+| asyncio.run() in Celery tasks | 2 | Clean event loop per task, avoids deprecation |
+| Webhook secrets auto-generated | 2 | token_urlsafe(32), stored in trigger_config |
 
 ---
 *State initialized: 2026-02-10*
