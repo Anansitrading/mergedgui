@@ -7,6 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from server.app.config import settings
 from server.app.routers.auth import router as auth_router
+from server.app.routers.executions import router as executions_router
+from server.app.routers.habits import router as habits_router
+from server.app.routers.projects import router as projects_router
+from server.app.routers.reflexes import router as reflexes_router
+from server.app.routers.skills import router as skills_router
 
 
 @asynccontextmanager
@@ -72,6 +77,11 @@ async def health_check():
 
 # --- Routers ---
 app.include_router(auth_router, prefix=settings.API_PREFIX)
+app.include_router(projects_router, prefix=settings.API_PREFIX)
+app.include_router(skills_router, prefix=settings.API_PREFIX)
+app.include_router(habits_router, prefix=settings.API_PREFIX)
+app.include_router(reflexes_router, prefix=settings.API_PREFIX)
+app.include_router(executions_router, prefix=settings.API_PREFIX)
 
 
 @app.get("/", tags=["system"])
