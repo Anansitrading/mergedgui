@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.app.config import settings
+from server.app.routers.auth import router as auth_router
 
 
 @asynccontextmanager
@@ -13,11 +14,30 @@ async def lifespan(app: FastAPI):
     """Application lifespan: startup and shutdown hooks."""
     # Startup
     print(f"Starting {settings.APP_TITLE} v{settings.APP_VERSION}")
+
+    # Initialize Keycloak OIDC discovery (non-blocking, best-effort)
+    try:
+        from server.app.services.keycloak import get_keycloak
+        keycloak = get_keycloak()
+        await keycloak.discover_oidc()
+    except Exception as e:
+        print(f"Warning: OIDC discovery failed (will retry on first auth): {e}")
+
     yield
+
     # Shutdown
     from server.app.dependencies import _redis_pool
     if _redis_pool is not None:
         await _redis_pool.close()
+
+    # Close Keycloak HTTP client
+    try:
+        from server.app.services.keycloak import get_keycloak
+        keycloak = get_keycloak()
+        await keycloak.close()
+    except Exception:
+        pass
+
     print("Shutdown complete")
 
 
@@ -48,6 +68,10 @@ async def health_check():
         "status": "healthy",
         "version": settings.APP_VERSION,
     }
+
+
+# --- Routers ---
+app.include_router(auth_router, prefix=settings.API_PREFIX)
 
 
 @app.get("/", tags=["system"])

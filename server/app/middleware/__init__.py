@@ -1,1 +1,1 @@
-# Middleware: Auth, RLS context, logging
+# Middleware package
