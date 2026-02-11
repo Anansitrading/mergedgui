@@ -9,6 +9,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: "0.0.0.0",
+      proxy: {
+        "/api/hypervisa": {
+          target: "http://localhost:8042",
+          changeOrigin: true,
+        },
+      },
     },
     plugins: [react(), tailwindcss()],
     define: {

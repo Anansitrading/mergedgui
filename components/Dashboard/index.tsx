@@ -4,6 +4,7 @@ import { DashboardTabs } from './DashboardTabs';
 import { ProjectsTab } from './ProjectsTab';
 import { IntegrationsTab } from './IntegrationsTab';
 import { SkillsTab } from './SkillsTab';
+import { HyperVisaTab } from './HyperVisaTab';
 import { UserAvatar } from './UserAvatar';
 import { UserDropdown } from './UserDropdown';
 import { SettingsModal } from '../SettingsModal';
@@ -128,6 +129,7 @@ export function Dashboard({ onProjectSelect }: DashboardProps) {
         )}
         {activeTab === 'integrations' && <IntegrationsTab />}
         {activeTab === 'skills' && <SkillsTab />}
+        {activeTab === 'hypervisa' && <HyperVisaTab />}
       </main>
 
       {/* Settings Modal */}
@@ -148,5 +150,6 @@ export { DashboardTabs } from './DashboardTabs';
 export { ProjectsTab } from './ProjectsTab';
 export { IntegrationsTab } from './IntegrationsTab';
 export { SkillsTab } from './SkillsTab';
+export { HyperVisaTab } from './HyperVisaTab';
 export { UserAvatar } from './UserAvatar';
 export { UserDropdown } from './UserDropdown';
